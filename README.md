@@ -1,4 +1,5 @@
 Hostel Management System
+
 A web-based Hostel Management System (HMS) developed for the SE3022 Case Study Project at SLIIT. The platform connects students, wardens/masters, and administrators through a single system for accommodation, leave, complaints, fees, notices, and reporting.
 
 Project Overview
