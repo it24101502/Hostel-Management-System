@@ -2,9 +2,11 @@ Hostel Management System
 
 A web-based Hostel Management System (HMS) developed for the SE3022 Case Study Project at SLIIT. The platform connects students, wardens/masters, and administrators through a single system for accommodation, leave, complaints, fees, notices, and reporting.
 
+
 Project Overview
 
 The system follows an event-driven microservice architecture. A React single-page application communicates with ASP.NET Web API services through an API gateway. Apache Kafka is used for asynchronous events, and each microservice owns an isolated MySQL database.
+
 
 Main Features
 
@@ -64,6 +66,7 @@ Deployment - Azure App Service or a Docker-capable host
 
 Testing - Unit, integration, Selenium end-to-end, and JMeter load tests
 
+
 High-Level Architecture
 
 flowchart TD
@@ -80,6 +83,7 @@ flowchart TD
     NT <--> KF
 
 Each service must own and access only its assigned MySQL schema.
+
 
 Getting Started
 Prerequisites
@@ -195,6 +199,7 @@ Automated tests must pass in CI before changes are merged.
 
 The interface should support the latest two versions of Chrome, Edge, and Firefox.
 
+
 Team Members
 
 IT24101502 - Suwasthikka S
@@ -204,6 +209,7 @@ IT24100245 - Peiris M P V P
 IT24102190 - De Silva D S P S N
 
 IT24101844 - Premarathna P A I B
+
 
 Academic Information
 
