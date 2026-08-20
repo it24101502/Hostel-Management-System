@@ -1,0 +1,18 @@
+# IntelliJ
+.idea/
+*.iml
+
+# ASP.NET
+bin/
+obj/
+.vs/
+*.user
+
+# React
+node_modules/
+dist/
+build/
+
+# Secrets
+.env
+.env.*
