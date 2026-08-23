@@ -1,228 +1,98 @@
-Hostel Management System
+# Hostel Management System (HMS)
 
-A web-based Hostel Management System (HMS) developed for the SE3022 Case Study Project at SLIIT. The platform connects students, wardens/masters, and administrators through a single system for accommodation, leave, complaints, fees, notices, and reporting.
+**SE3022 – Case Study Project** | Year 3, Semester 1, 2026
 
+A microservice-based web platform that connects students, wardens and administrators through one reliable workflow for authentication, room allocation, leave & movement, complaints, fees, and notices.
 
-Project Overview
+## Team
 
-The system follows an event-driven microservice architecture. A React single-page application communicates with ASP.NET Web API services through an API gateway. Apache Kafka is used for asynchronous events, and each microservice owns an isolated MySQL database.
+| Student ID | Name | Primary Module |
+| --- | --- | --- |
+| IT24101502 | Suwasthikka S | Daily operations (complaints / schedules) |
+| IT24100245 | Peiris M P V P | Leave & movement |
+| IT24102190 | De Silva D S P S N | Rooms & allocation |
+| IT24101844 | Premarathna P A I B | Users & fees |
 
+## The Problem
 
-Main Features
+Manual hostel processes create avoidable risk: leave permission is hard to track, wardens can't see movements in real time, room/fee/complaint records are fragmented, and timetables and notices are easy to miss. One missing record can affect student safety.
 
-Secure login using JWT authentication
+## Proposed Solution
 
-Role-based access for Students, Wardens/Masters, and Administrators
+One platform connecting five core areas:
 
-Student profile and user account management
+1. **Student & access** — profiles, roles and secure login
+2. **Rooms** — room availability and allocation
+3. **Leave & movement** — requests, approval, departure and return
+4. **Daily operations** — schedules, complaints, fees and notices
+5. **Reports** — live occupancy, leave, fee and complaint reports
 
-Room and bed management
+## Roles & Scope
 
-Student room allocation and transfer
+| Role | Capabilities |
+| --- | --- |
+| Student | Request leave, view room & fees, submit complaints, see schedules/notices |
+| Warden / Master | Approve leave, record movements, manage schedules, monitor complaints |
+| Administrator | Manage users, rooms, fees and notices; generate reports |
 
-Leave request submission and approval
+**In first release:** Authentication, Rooms, Leave, Movement, Timetables, Complaints, Fees, Notices, Reports
+**Explicitly out of scope:** Biometric hardware, GPS tracking, native mobile apps, direct banking integration
 
-Student departure and return tracking
+## Tech Stack
 
-Complaint submission and resolution tracking
+- **Frontend:** React.js
+- **Backend:** ASP.NET + ADO.NET (microservices)
+- **Database:** MySQL
+- **Infrastructure:** Docker, Azure
+- **Source control / CI-CD:** GitHub, GitHub Actions (functional from Sprint 1)
+- **Testing:** Unit & integration tests, Selenium (E2E), JMeter (load)
 
-Hostel fee invoicing and payment status management
+## Architecture
 
-Notice and timetable publishing
+The system is built as independently deployable microservices (one per module — Auth, Rooms, Leave & Movement, Complaints, Fees, Notices) so that failure in one service does not cause a full-system outage (NFR-04).
 
-Live, filterable, and downloadable reports
+## Non-Functional Highlights
 
-Audit logging for state-changing operations
+- Requests complete within ≤ 3 seconds under expected load (NFR-01)
+- Role-based access, salted password hashes, HTTPS/TLS everywhere (NFR-02)
+- All state-changing operations recorded in an auditable activity log (NFR-03)
+- 99% uptime target during the academic term (NFR-05)
+- Server-side validation on all form input (NFR-09)
 
-User Roles & main Capabilities
+## Repository Branches
 
-Student - View and update permitted profile details, view room and fee status, request leave, submit complaints, and view notices and schedules
+| Branch | Purpose |
+| --- | --- |
+| `main` | Stable, release-ready code |
+| `deploy` | Deployment configuration and pipeline for staging/production |
+| `Sprint-1-QA-Testing` | QA verification for Sprint 1 deliverables |
+| `feature/HMS-1-...` | Feature branch — Secure login & role-based access |
+| `feature/HMS-2-...` | Feature branch — Register & maintain student profiles |
 
-Warden / Master - Approve or reject leave, record student movement, manage schedules, and monitor complaints
+## Sprint Plan
 
-Administrator - Manage users rooms, allocations, fees, notices, and system reports
+| Sprint | Theme |
+| --- | --- |
+| 1 | Foundation — Identity & Users |
+| 2 | Room Management |
+| 3 | Leave & Movement |
+| 4 | Complaints, Fees, Notices & Reporting |
 
-Technology Stcks
+## Product Backlog (Must-priority core)
 
-Frontend - React.js
+| ID | User Story | Priority | Owner |
+| --- | --- | --- | --- |
+| US01 | Secure login and role-based access | Must | Member 1 |
+| US02 | Register and maintain student profiles | Must | Member 1 |
+| US03 | Manage rooms, beds and capacity | Must | Member 2 |
+| US04 | Allocate or transfer students | Must | Member 2 |
+| US05 | Submit a complete leave request | Must | Member 3 |
+| US06 | Approve or reject leave with a reason | Must | Member 3 |
+| US07 | Submit and track complaints | Must | Member 4 |
+| US08 | Publish schedules and notices | Should | Member 4 |
 
-Backend - ASP.NET Web API
+Full JIRA backlog: 16+ stories, acceptance criteria, priority, estimate, owner and sprint — see project documentation.
 
-Data Access - ADO.NET with direct SQL
+## AI Usage Disclosure
 
-Database - MySQL
-
-Messaging - Apache Kafka
-
-Architecture - Event-driven microservices
-
-Authentication - JWT and role-based access control
-
-Containers - Docker / Docker Compose
-
-CI/CD - GitHub Actions
-
-Deployment - Azure App Service or a Docker-capable host
-
-Testing - Unit, integration, Selenium end-to-end, and JMeter load tests
-
-
-High-Level Architecture
-
-flowchart TD
-    UI[React Web Application] --> GW[API Gateway]
-    GW --> ID[Identity Service]
-    GW --> AC[Accommodation Service]
-    GW --> LA[Leave and Activity Service]
-    GW --> HO[Hostel Operations Service]
-    GW --> NT[Notification Service]
-    ID <--> KF[Apache Kafka]
-    AC <--> KF
-    LA <--> KF
-    HO <--> KF
-    NT <--> KF
-
-Each service must own and access only its assigned MySQL schema.
-
-
-Getting Started
-Prerequisites
-
-Install the following tools:
-
-Git
-
-Node.js and npm
-
-.NET SDK used by the project
-
-MySQL Server
-
-Docker Desktop
-
-Clone the Repository
-
-git clone <your-repository-url>
-
-cd <repository-folder>
-
-Replace the placeholders with your actual repository details.
-
-Configure Environment Variables
-
-Create local environment files from the example files included in the repository. Typical configuration values include:
-
-MYSQL_HOST=localhost
-
-MYSQL_PORT=3306
-
-MYSQL_DATABASE=<service_database>
-
-MYSQL_USER=<database_user>
-
-MYSQL_PASSWORD=<database_password>
-
-JWT_SECRET=<strong_secret>
-
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-
-Do not commit passwords, JWT secrets, connection strings, or production credentials.
-
-Run with Docker Compose
-
-If the repository contains a root Compose file, run: docker compose up --build
-
-To stop the containers: docker compose down
-
-Run Without Docker
-Start the backend services from their individual project directories: dotnet restore , dotnet run
-
-Start the React frontend from its directory: npm install , npm run dev
-
-Update these paths and commands if your repository uses different directory or script names.
-
-Testing
-
-Run .NET tests: dotnet test
-
-Run frontend tests using the test script configured in the frontend package:
-
-npm test
-
-Before merging, confirm that relevant unit, integration, end-to-end, and load tests pass.
-
-Branching Strategy
-
-main - Stable, reviewed source code used as the integration baseline
-
-deploy - Deployment-ready configuration and release state
-
-feature/<name> - Development of an individual feature or user story
-
-bugfix/<name> - Isolated defect correction
-
-Recommended workflow:
-
-Create a feature branch from main.
-
-Implement and test the assigned feature.
-
-Push the branch and open a pull request into main.
-
-Merge only after review and successful CI checks.
-
-Promote an approved release from main to deploy.
-
-Security Requirements
-
-Store passwords using a salted cryptographic hash.
-
-Use HTTPS/TLS in deployed environments.
-
-Validate all input on the server, even when client-side validation exists.
-
-Enforce authorization on every protected endpoint.
-
-Keep secrets in environment variables or a secure secret store.
-
-Record authentication attempts and state-changing operations in audit logs.
-
-Performance and Quality Targets
-
-Normal user-facing requests should complete within 3 seconds under expected load.
-
-The system targets 99% uptime during the academic term, excluding scheduled maintenance.
-
-Microservices should be independently deployable and scalable.
-
-Automated tests must pass in CI before changes are merged.
-
-The interface should support the latest two versions of Chrome, Edge, and Firefox.
-
-
-Team Members
-
-IT24101502 - Suwasthikka S
-
-IT24100245 - Peiris M P V P
-
-IT24102190 - De Silva D S P S N
-
-IT24101844 - Premarathna P A I B
-
-
-Academic Information
-
-Module: SE3022 - Case Study Project
-
-Programme: BSc (Hons) in Computer Science
-
-Year: 3
-
-Semester: 1
-
-Institution: SLIIT
-
-License
-
-This repository is an academic project. Add a license only if the team and module guidelines allow public reuse.
+Per the assignment brief, direct use of AI to generate or complete project code is prohibited. AI tools were used only for research and planning support, with disclosure.
