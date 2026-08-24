@@ -70,6 +70,11 @@ builder.Services
 builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+builder.Services.AddScoped<
+    ILoginAuditRepository,
+    LoginAuditRepository>();
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddSingleton<

@@ -1,4 +1,5 @@
 using IdentityService.DTOs;
+using IdentityService.Models;
 using IdentityService.Options;
 using IdentityService.Repositories;
 using Microsoft.Extensions.Options;
@@ -11,12 +12,14 @@ public class AuthService : IAuthService
     private readonly LockoutOptions _lockoutOptions;
     private readonly IUserRepository _userRepository;
     private readonly IJwtTokenService? _jwtTokenService;
+    private readonly ILoginAuditRepository? _loginAuditRepository;
 
     public AuthService(IUserRepository userRepository)
     {
         _userRepository = userRepository;
         _lockoutOptions = new LockoutOptions();
         _jwtTokenService = null;
+        _loginAuditRepository = null;
     }
 
     public AuthService(
@@ -26,6 +29,7 @@ public class AuthService : IAuthService
         _userRepository = userRepository;
         _lockoutOptions = lockoutOptions.Value;
         _jwtTokenService = null;
+        _loginAuditRepository = null;
 
         if (_lockoutOptions.DurationMinutes <= 0)
         {
@@ -42,6 +46,25 @@ public class AuthService : IAuthService
         _userRepository = userRepository;
         _lockoutOptions = lockoutOptions.Value;
         _jwtTokenService = jwtTokenService;
+        _loginAuditRepository = null;
+
+        if (_lockoutOptions.DurationMinutes <= 0)
+        {
+            throw new InvalidOperationException(
+                "Lockout duration must be greater than zero.");
+        }
+    }
+
+    public AuthService(
+        IUserRepository userRepository,
+        IOptions<LockoutOptions> lockoutOptions,
+        IJwtTokenService jwtTokenService,
+        ILoginAuditRepository loginAuditRepository)
+    {
+        _userRepository = userRepository;
+        _lockoutOptions = lockoutOptions.Value;
+        _jwtTokenService = jwtTokenService;
+        _loginAuditRepository = loginAuditRepository;
 
         if (_lockoutOptions.DurationMinutes <= 0)
         {
@@ -65,6 +88,11 @@ public class AuthService : IAuthService
             !user.IsActive ||
             !user.IsRoleActive)
         {
+            await RecordAuditAsync(
+                user?.UserId,
+                normalizedIdentifier,
+                LoginAuditOutcomes.Failure);
+
             return null;
         }
 
@@ -73,6 +101,11 @@ public class AuthService : IAuthService
             (!user.LockoutEndAt.HasValue ||
              user.LockoutEndAt.Value > DateTime.UtcNow))
         {
+            await RecordAuditAsync(
+                user.UserId,
+                normalizedIdentifier,
+                LoginAuditOutcomes.Failure);
+
             return null;
         }
 
@@ -99,6 +132,11 @@ public class AuthService : IAuthService
                 shouldLock,
                 lockoutEndAt);
 
+            await RecordAuditAsync(
+                user.UserId,
+                normalizedIdentifier,
+                LoginAuditOutcomes.Failure);
+
             return null;
         }
 
@@ -107,6 +145,11 @@ public class AuthService : IAuthService
 
         var tokenResult =
             _jwtTokenService?.CreateToken(user);
+
+        await RecordAuditAsync(
+            user.UserId,
+            normalizedIdentifier,
+            LoginAuditOutcomes.Success);
 
         return new LoginResponse
         {
@@ -119,5 +162,21 @@ public class AuthService : IAuthService
             ExpiresAt =
                 tokenResult?.ExpiresAt ?? default
         };
+    }
+
+    private Task RecordAuditAsync(
+        ulong? userId,
+        string identifier,
+        string outcome)
+    {
+        if (_loginAuditRepository is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _loginAuditRepository.RecordAttemptAsync(
+            userId,
+            identifier,
+            outcome);
     }
 }
