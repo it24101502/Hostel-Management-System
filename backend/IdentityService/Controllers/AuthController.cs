@@ -1,4 +1,5 @@
 using IdentityService.DTOs;
+using IdentityService.Exceptions;
 using IdentityService.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,16 +20,29 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login(
         [FromBody] LoginRequest request)
     {
-        var result = await _authService.LoginAsync(request);
-
-        if (result is null)
+        try
         {
-            return Unauthorized(new ErrorResponse
-            {
-                Message = "Invalid credentials."
-            });
-        }
+            var result =
+                await _authService.LoginAsync(request);
 
-        return Ok(result);
+            if (result is null)
+            {
+                return Unauthorized(new ErrorResponse
+                {
+                    Message = "Invalid credentials."
+                });
+            }
+
+            return Ok(result);
+        }
+        catch (AccountLockedException exception)
+        {
+            return StatusCode(
+                StatusCodes.Status423Locked,
+                new ErrorResponse
+                {
+                    Message = exception.Message
+                });
+        }
     }
 }

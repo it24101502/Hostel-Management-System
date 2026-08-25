@@ -17,3 +17,10 @@ build/
 .env
 .env.*
 !.env.example
+
+# React dependencies and builds
+frontend/node_modules/
+frontend/dist/
+
+# Local frontend environment configuration
+frontend/.env.local

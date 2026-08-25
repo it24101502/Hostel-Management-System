@@ -1,4 +1,5 @@
 using IdentityService.DTOs;
+using IdentityService.Exceptions;
 using IdentityService.Models;
 using IdentityService.Options;
 using IdentityService.Repositories;
@@ -61,9 +62,14 @@ public class AccountLockoutTests
             Password = "CorrectPassword@123"
         };
 
-        var result = await service.LoginAsync(request);
+        var exception =
+            await Assert.ThrowsAsync<AccountLockedException>(
+                () => service.LoginAsync(request));
 
-        Assert.Null(result);
+        Assert.Equal(
+            "The account is temporarily locked. Please try again later.",
+            exception.Message);
+
         Assert.False(repository.SuccessfulLoginRecorded);
         Assert.False(repository.FailedLoginRecorded);
     }

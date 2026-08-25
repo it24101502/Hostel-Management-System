@@ -1,4 +1,5 @@
 using IdentityService.DTOs;
+using IdentityService.Exceptions;
 using IdentityService.Models;
 using IdentityService.Options;
 using IdentityService.Repositories;
@@ -106,7 +107,7 @@ public class AuthService : IAuthService
                 normalizedIdentifier,
                 LoginAuditOutcomes.Failure);
 
-            return null;
+            throw new AccountLockedException();
         }
 
         bool passwordIsCorrect = BCrypt.Net.BCrypt.Verify(
