@@ -87,6 +87,14 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 builder.Services.AddScoped<
+    IAdminUserRepository,
+    AdminUserRepository>();
+
+builder.Services.AddScoped<
+    IAdminUserService,
+    AdminUserService>();
+
+builder.Services.AddScoped<
     ILoginAuditRepository,
     LoginAuditRepository>();
 
