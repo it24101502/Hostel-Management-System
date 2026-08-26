@@ -1,0 +1,138 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test-and-migrate:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+
+        env:
+          MYSQL_ROOT_PASSWORD: TestRootPassword123!
+          MYSQL_ROOT_HOST: "%"
+
+        ports:
+          - 3306:3306
+
+        options: >-
+          --health-cmd="mysqladmin ping
+          -h 127.0.0.1
+          -u root
+          -pTestRootPassword123!"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      MYSQL_ROOT_PASSWORD: TestRootPassword123!
+
+      ConnectionStrings__DefaultConnection: >-
+        Server=127.0.0.1;
+        Port=3306;
+        Database=Hostel_Management_System;
+        User ID=root;
+        Password=TestRootPassword123!;
+
+      Jwt__Key: >-
+        ThisIsATemporarySecureJwtKeyForGitHubActionsTesting123456789
+
+      Jwt__Issuer: HostelManagement.IdentityService
+      Jwt__Audience: HostelManagement.Client
+      Jwt__ExpiryMinutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+
+      - name: Run authentication schema migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/001_create_auth_schema.sql
+
+      - name: Run audit-log migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/002_create_auth_audit_logs.sql
+
+      - name: Run student-profile and fee migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/003_create_student_profile_and_fee_schema.sql
+
+      - name: Verify expected database tables
+        run: |
+          TABLE_COUNT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT COUNT(*)
+              FROM information_schema.tables
+              WHERE table_schema = 'hostel_management_system'
+                AND table_name IN
+                (
+                  'roles',
+                  'users',
+                  'user_sessions',
+                  'login_audit_logs',
+                  'student_profiles',
+                  'guardian_contacts',
+                  'fee_invoices',
+                  'fee_payments'
+                );
+            ")
+
+          test "$TABLE_COUNT" -eq 8
+
+      - name: Restore dependencies
+        run: dotnet restore backend/HostelManagement.sln
+
+      - name: Build backend
+        run: >
+          dotnet build
+          backend/HostelManagement.sln
+          --configuration Release
+          --no-restore
+
+      - name: Run tests
+        run: >
+          dotnet test
+          backend/HostelManagement.sln
+          --configuration Release
+          --no-build
