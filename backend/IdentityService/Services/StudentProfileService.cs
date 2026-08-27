@@ -203,4 +203,54 @@ public class StudentProfileService
             UpdatedAt = profile.UpdatedAt
         };
     }
+
+    public async Task<StudentProfileResponse?> GetOwnAsync(
+        ulong userId)
+    {
+        StudentProfile? profile =
+            await _profileRepository.GetByUserIdAsync(
+                userId);
+
+        return profile is null
+            ? null
+            : MapResponse(profile);
+    }
+
+    public async Task<StudentProfileResponse?> UpdateOwnAsync(
+        ulong userId,
+        UpdateOwnStudentProfileRequest request)
+    {
+        if (request.AdditionalFields is { Count: > 0 })
+        {
+            throw new RestrictedProfileFieldException(
+                request.AdditionalFields.Keys);
+        }
+
+        StudentProfile? existingProfile =
+            await _profileRepository.GetByUserIdAsync(
+                userId);
+
+        if (existingProfile is null)
+        {
+            return null;
+        }
+
+        bool updated =
+            await _profileRepository.UpdateOwnAsync(
+                userId,
+                request);
+
+        if (!updated)
+        {
+            return null;
+        }
+
+        StudentProfile? updatedProfile =
+            await _profileRepository.GetByUserIdAsync(
+                userId);
+
+        return updatedProfile is null
+            ? null
+            : MapResponse(updatedProfile);
+    }
 }
