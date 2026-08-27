@@ -95,6 +95,14 @@ builder.Services.AddScoped<
     AdminUserService>();
 
 builder.Services.AddScoped<
+    IGuardianContactRepository,
+    GuardianContactRepository>();
+
+builder.Services.AddScoped<
+    IGuardianContactService,
+    GuardianContactService>();
+
+builder.Services.AddScoped<
     ILoginAuditRepository,
     LoginAuditRepository>();
 
