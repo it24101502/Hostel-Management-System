@@ -103,6 +103,22 @@ builder.Services.AddScoped<
     GuardianContactService>();
 
 builder.Services.AddScoped<
+    IProfileUniquenessRepository,
+    ProfileUniquenessRepository>();
+
+builder.Services.AddScoped<
+    IProfileUniquenessService,
+    ProfileUniquenessService>();
+
+builder.Services.AddScoped<
+    IStudentProfileRepository,
+    StudentProfileRepository>();
+
+builder.Services.AddScoped<
+    IStudentProfileService,
+    StudentProfileService>();
+
+builder.Services.AddScoped<
     ILoginAuditRepository,
     LoginAuditRepository>();
 
