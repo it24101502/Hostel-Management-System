@@ -119,6 +119,14 @@ builder.Services.AddScoped<
     StudentProfileService>();
 
 builder.Services.AddScoped<
+    IFeeInvoiceRepository,
+    FeeInvoiceRepository>();
+
+builder.Services.AddScoped<
+    IFeeInvoiceService,
+    FeeInvoiceService>();
+
+builder.Services.AddScoped<
     ILoginAuditRepository,
     LoginAuditRepository>();
 
