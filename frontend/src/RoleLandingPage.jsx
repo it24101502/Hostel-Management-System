@@ -52,6 +52,19 @@ function RoleLandingPage({ requiredRole }) {
             </button>
           )}
 
+          {requiredRole === "ADMIN" && (
+            <button
+              type="button"
+              onClick={() =>
+                window.location.assign(
+                  "/admin/users"
+                )
+              }
+            >
+              Manage users
+            </button>
+          )}
+
           <button
             type="button"
             className="secondary-button"
