@@ -104,7 +104,8 @@ jobs:
             --execute="
               SELECT COUNT(*)
               FROM information_schema.tables
-              WHERE table_schema = 'hostel_management_system'
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Management_System')
                 AND table_name IN
                 (
                   'roles',
@@ -118,7 +119,26 @@ jobs:
                 );
             ")
 
-          test "$TABLE_COUNT" -eq 8
+          echo "Expected 8 tables; found $TABLE_COUNT."
+
+          if [ "$TABLE_COUNT" -ne 8 ]; then
+            echo "Database tables currently available:"
+
+            mysql \
+              --host=127.0.0.1 \
+              --port=3306 \
+              --user=root \
+              --password="$MYSQL_ROOT_PASSWORD" \
+              --execute="
+                SELECT table_schema, table_name
+                FROM information_schema.tables
+                WHERE LOWER(table_schema) =
+                      LOWER('Hostel_Management_System')
+                ORDER BY table_name;
+              "
+
+            exit 1
+          fi
 
       - name: Restore dependencies
         run: dotnet restore backend/HostelManagement.sln
