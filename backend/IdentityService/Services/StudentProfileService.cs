@@ -204,6 +204,39 @@ public class StudentProfileService
         };
     }
 
+    public async Task<StudentProfileResponse?>
+        UpdateOwnPhotoAsync(
+            ulong userId,
+            string profilePhotoUrl)
+    {
+        StudentProfile? existingProfile =
+            await _profileRepository.GetByUserIdAsync(
+                userId);
+
+        if (existingProfile is null)
+        {
+            return null;
+        }
+
+        bool updated =
+            await _profileRepository.UpdateOwnPhotoAsync(
+                userId,
+                profilePhotoUrl);
+
+        if (!updated)
+        {
+            return null;
+        }
+
+        StudentProfile? updatedProfile =
+            await _profileRepository.GetByUserIdAsync(
+                userId);
+
+        return updatedProfile is null
+            ? null
+            : MapResponse(updatedProfile);
+    }
+
     public async Task<StudentProfileResponse?> GetOwnAsync(
         ulong userId)
     {

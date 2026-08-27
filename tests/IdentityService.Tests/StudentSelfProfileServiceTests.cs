@@ -264,6 +264,28 @@ public class StudentSelfProfileServiceTests
             return Task.FromResult(true);
         }
 
+        public Task<bool> UpdateOwnPhotoAsync(
+            ulong userId,
+            string profilePhotoUrl)
+        {
+            StudentProfile? profile =
+                Profiles.FirstOrDefault(item =>
+                    item.UserId == userId);
+
+            if (profile is null)
+            {
+                return Task.FromResult(false);
+            }
+
+            profile.ProfilePhotoUrl =
+                profilePhotoUrl;
+
+            profile.UpdatedAt =
+                DateTime.UtcNow;
+
+            return Task.FromResult(true);
+        }
+
         public Task<StudentProfile?> GetByIdAsync(
             ulong studentProfileId)
         {
@@ -321,5 +343,6 @@ public class StudentSelfProfileServiceTests
         {
             return Task.CompletedTask;
         }
+
     }
 }

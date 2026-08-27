@@ -97,6 +97,40 @@ public class StudentProfileRepository
         return MapProfile(reader);
     }
 
+    public async Task<bool> UpdateOwnPhotoAsync(
+        ulong userId,
+        string profilePhotoUrl)
+    {
+        const string query = """
+            UPDATE student_profiles
+            SET profile_photo_url = @profilePhotoUrl
+            WHERE user_id = @userId;
+            """;
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+
+        await connection.OpenAsync();
+
+        await using var command =
+            new MySqlCommand(query, connection);
+
+        command.Parameters.AddWithValue(
+            "@userId",
+            userId);
+
+        command.Parameters.AddWithValue(
+            "@profilePhotoUrl",
+            profilePhotoUrl);
+
+        await command.ExecuteNonQueryAsync();
+
+        StudentProfile? profile =
+            await GetByUserIdAsync(userId);
+
+        return profile is not null;
+    }
+
     public async Task<bool> UpdateOwnAsync(
         ulong userId,
         UpdateOwnStudentProfileRequest request)

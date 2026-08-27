@@ -20,4 +20,8 @@ public interface IStudentProfileService
     Task<StudentProfileResponse?> UpdateOwnAsync(
         ulong userId,
         UpdateOwnStudentProfileRequest request);
+
+    Task<StudentProfileResponse?> UpdateOwnPhotoAsync(
+        ulong userId,
+        string profilePhotoUrl);
 }

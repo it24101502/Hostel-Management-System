@@ -1,5 +1,7 @@
 import { useState } from "react";
 import RoleLandingPage from "./RoleLandingPage.jsx";
+import StudentProfilePage from
+  "./StudentProfilePage.jsx";
 import hostelBackground from
   "./assets/hostel-night-login-background.png";
 
@@ -274,6 +276,13 @@ function LoginPage() {
 }
 
 function App() {
+  if (
+    window.location.pathname ===
+    "/student/profile"
+  ) {
+    return <StudentProfilePage />;
+  }
+
   const requiredRole =
     landingPageRoles[window.location.pathname];
 

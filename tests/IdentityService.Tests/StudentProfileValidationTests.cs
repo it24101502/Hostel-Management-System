@@ -402,5 +402,24 @@ public class StudentProfileValidationTests
 
             return Task.FromResult(true);
         }
+
+        public Task<bool> UpdateOwnPhotoAsync(
+            ulong userId,
+            string profilePhotoUrl)
+        {
+            StudentProfile? profile =
+                Profiles.FirstOrDefault(item =>
+                    item.UserId == userId);
+
+            if (profile is null)
+            {
+                return Task.FromResult(false);
+            }
+
+            profile.ProfilePhotoUrl =
+                profilePhotoUrl;
+
+            return Task.FromResult(true);
+        }
     }
 }

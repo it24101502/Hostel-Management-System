@@ -136,6 +136,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseCors("ReactFrontend");
 app.UseAuthentication();
 app.UseMiddleware<RoleAuthorizationMiddleware>();

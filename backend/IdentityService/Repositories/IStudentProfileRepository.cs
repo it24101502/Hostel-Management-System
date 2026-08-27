@@ -25,4 +25,8 @@ public interface IStudentProfileRepository
     Task<bool> UpdateOwnAsync(
         ulong userId,
         UpdateOwnStudentProfileRequest request);
+
+    Task<bool> UpdateOwnPhotoAsync(
+        ulong userId,
+        string profilePhotoUrl);
 }
