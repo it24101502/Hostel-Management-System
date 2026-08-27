@@ -38,7 +38,7 @@ public class FeeInvoiceServiceTests
             result.PaidAmount);
 
         Assert.Equal(
-            "PENDING",
+            "UNPAID",
             result.Status);
 
         Assert.Equal(
@@ -298,7 +298,7 @@ public class FeeInvoiceServiceTests
                     DueDate =
                         request.DueDate!.Value,
 
-                    Status = "PENDING",
+                    Status = "UNPAID",
 
                     CreatedAt = now,
 

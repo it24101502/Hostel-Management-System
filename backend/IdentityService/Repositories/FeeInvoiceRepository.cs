@@ -78,7 +78,7 @@ public class FeeInvoiceRepository
                 0.00,
                 UTC_TIMESTAMP(),
                 @dueDate,
-                'PENDING'
+                'UNPAID'
             );
             """;
 

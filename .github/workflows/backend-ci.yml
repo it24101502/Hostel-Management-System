@@ -92,6 +92,15 @@ jobs:
             --password="$MYSQL_ROOT_PASSWORD" \
             < database/migrations/003_create_student_profile_and_fee_schema.sql
 
+      - name: Run fee-status migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/004_update_fee_invoice_status_values.sql
+
       - name: Verify expected database tables
         run: |
           TABLE_COUNT=$(mysql \
@@ -139,6 +148,28 @@ jobs:
 
             exit 1
           fi
+
+      - name: Verify fee invoice status configuration
+        run: |
+          STATUS_DEFAULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT column_default
+              FROM information_schema.columns
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Management_System')
+                AND table_name = 'fee_invoices'
+                AND column_name = 'status';
+            ")
+
+          echo "Invoice status default: $STATUS_DEFAULT"
+
+          test "$STATUS_DEFAULT" = "UNPAID"
 
       - name: Restore dependencies
         run: dotnet restore backend/HostelManagement.sln
