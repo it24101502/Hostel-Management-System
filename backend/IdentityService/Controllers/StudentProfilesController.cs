@@ -3,6 +3,7 @@ using IdentityService.DTOs;
 using IdentityService.Exceptions;
 using IdentityService.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace IdentityService.Controllers;
 
@@ -18,9 +19,83 @@ public class StudentProfilesController : ControllerBase
         _profileService = profileService;
     }
 
+    // Student retrieves their own profile.
+    [HttpGet("me")]
+    [RequireRole("STUDENT")]
+    public async Task<ActionResult<StudentProfileResponse>>
+        GetOwnProfile()
+    {
+        if (!TryGetAuthenticatedUserId(out ulong userId))
+        {
+            return Unauthorized(new
+            {
+                message =
+                    "The authenticated user ID is missing or invalid."
+            });
+        }
+
+        StudentProfileResponse? profile =
+            await _profileService.GetOwnAsync(userId);
+
+        if (profile is null)
+        {
+            return NotFound(new
+            {
+                message = "Student profile was not found."
+            });
+        }
+
+        return Ok(profile);
+    }
+
+    // Student updates only their permitted fields.
+    [HttpPut("me")]
+    [RequireRole("STUDENT")]
+    public async Task<ActionResult<StudentProfileResponse>>
+        UpdateOwnProfile(
+            UpdateOwnStudentProfileRequest request)
+    {
+        if (!TryGetAuthenticatedUserId(out ulong userId))
+        {
+            return Unauthorized(new
+            {
+                message =
+                    "The authenticated user ID is missing or invalid."
+            });
+        }
+
+        try
+        {
+            StudentProfileResponse? updatedProfile =
+                await _profileService.UpdateOwnAsync(
+                    userId,
+                    request);
+
+            if (updatedProfile is null)
+            {
+                return NotFound(new
+                {
+                    message =
+                        "Student profile was not found."
+                });
+            }
+
+            return Ok(updatedProfile);
+        }
+        catch (RestrictedProfileFieldException exception)
+        {
+            return BadRequest(new
+            {
+                message = exception.Message,
+                restrictedFields =
+                    exception.RestrictedFields
+            });
+        }
+    }
+
+    // Staff retrieves a profile using its ID.
     [HttpGet("{studentProfileId:long}")]
     [RequireRole(
-        "STUDENT",
         "ADMIN",
         "WARDEN",
         "HOSTEL_MASTER")]
@@ -42,6 +117,7 @@ public class StudentProfilesController : ControllerBase
         return Ok(profile);
     }
 
+    // Administrator creates a student profile.
     [HttpPost]
     [RequireRole("ADMIN")]
     public async Task<ActionResult<StudentProfileResponse>>
@@ -96,9 +172,9 @@ public class StudentProfilesController : ControllerBase
         }
     }
 
+    // Staff updates a profile using its ID.
     [HttpPut("{studentProfileId:long}")]
     [RequireRole(
-        "STUDENT",
         "ADMIN",
         "WARDEN",
         "HOSTEL_MASTER")]
@@ -142,5 +218,17 @@ public class StudentProfilesController : ControllerBase
                 message = exception.Message
             });
         }
+    }
+
+    private bool TryGetAuthenticatedUserId(
+        out ulong userId)
+    {
+        string? userIdValue =
+            User.FindFirst(
+                JwtRegisteredClaimNames.Sub)?.Value;
+
+        return ulong.TryParse(
+            userIdValue,
+            out userId);
     }
 }
