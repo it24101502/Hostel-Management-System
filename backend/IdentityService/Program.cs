@@ -127,6 +127,14 @@ builder.Services.AddScoped<
     FeeInvoiceService>();
 
 builder.Services.AddScoped<
+    IFeePaymentRepository,
+    FeePaymentRepository>();
+
+builder.Services.AddScoped<
+    IFeePaymentService,
+    FeePaymentService>();
+
+builder.Services.AddScoped<
     ILoginAuditRepository,
     LoginAuditRepository>();
 
