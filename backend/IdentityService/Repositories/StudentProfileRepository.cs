@@ -45,6 +45,124 @@ public class StudentProfileRepository
         return Convert.ToInt32(result) > 0;
     }
 
+    public async Task<StudentProfile?> GetByUserIdAsync(
+        ulong userId)
+    {
+        const string query = """
+            SELECT
+                sp.student_profile_id,
+                sp.user_id,
+                u.email,
+                sp.registration_number,
+                sp.date_of_birth,
+                sp.gender,
+                sp.address_line_1,
+                sp.address_line_2,
+                sp.city,
+                sp.district,
+                sp.postal_code,
+                sp.programme_name,
+                sp.faculty_name,
+                sp.academic_year,
+                sp.profile_photo_url,
+                sp.created_at,
+                sp.updated_at
+            FROM student_profiles AS sp
+            INNER JOIN users AS u
+                ON u.user_id = sp.user_id
+            WHERE sp.user_id = @userId
+            LIMIT 1;
+            """;
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+
+        await connection.OpenAsync();
+
+        await using var command =
+            new MySqlCommand(query, connection);
+
+        command.Parameters.AddWithValue(
+            "@userId",
+            userId);
+
+        await using var reader =
+            await command.ExecuteReaderAsync();
+
+        if (!await reader.ReadAsync())
+        {
+            return null;
+        }
+
+        return MapProfile(reader);
+    }
+
+    public async Task<bool> UpdateOwnAsync(
+        ulong userId,
+        UpdateOwnStudentProfileRequest request)
+    {
+        const string query = """
+            UPDATE student_profiles
+            SET
+                address_line_1 = @addressLine1,
+                address_line_2 = @addressLine2,
+                city = @city,
+                district = @district,
+                postal_code = @postalCode,
+                profile_photo_url = @profilePhotoUrl
+            WHERE user_id = @userId;
+            """;
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+
+        await connection.OpenAsync();
+
+        await using var command =
+            new MySqlCommand(query, connection);
+
+        command.Parameters.AddWithValue(
+            "@userId",
+            userId);
+
+        AddNullableString(
+            command,
+            "@addressLine1",
+            request.AddressLine1);
+
+        AddNullableString(
+            command,
+            "@addressLine2",
+            request.AddressLine2);
+
+        AddNullableString(
+            command,
+            "@city",
+            request.City);
+
+        AddNullableString(
+            command,
+            "@district",
+            request.District);
+
+        AddNullableString(
+            command,
+            "@postalCode",
+            request.PostalCode);
+
+        AddNullableString(
+            command,
+            "@profilePhotoUrl",
+            request.ProfilePhotoUrl);
+
+        await command.ExecuteNonQueryAsync();
+
+        StudentProfile? profile =
+            await GetByUserIdAsync(userId);
+
+        return profile is not null;
+    }
+
     public async Task<bool> ProfileExistsForUserAsync(
         ulong userId)
     {

@@ -12,10 +12,17 @@ public interface IStudentProfileRepository
     Task<StudentProfile?> GetByIdAsync(
         ulong studentProfileId);
 
+    Task<StudentProfile?> GetByUserIdAsync(
+        ulong userId);
+
     Task<ulong> CreateAsync(
         CreateStudentProfileRequest request);
 
     Task<bool> UpdateAsync(
         ulong studentProfileId,
         UpdateStudentProfileRequest request);
+
+    Task<bool> UpdateOwnAsync(
+        ulong userId,
+        UpdateOwnStudentProfileRequest request);
 }

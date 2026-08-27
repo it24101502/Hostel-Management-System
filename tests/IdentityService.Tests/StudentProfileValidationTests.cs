@@ -355,5 +355,52 @@ public class StudentProfileValidationTests
 
             return Task.FromResult(true);
         }
+
+        public Task<StudentProfile?> GetByUserIdAsync(
+            ulong userId)
+        {
+            StudentProfile? profile =
+                Profiles.FirstOrDefault(item =>
+                    item.UserId == userId);
+
+            return Task.FromResult(profile);
+        }
+
+        public Task<bool> UpdateOwnAsync(
+            ulong userId,
+            UpdateOwnStudentProfileRequest request)
+        {
+            StudentProfile? profile =
+                Profiles.FirstOrDefault(item =>
+                    item.UserId == userId);
+
+            if (profile is null)
+            {
+                return Task.FromResult(false);
+            }
+
+            profile.AddressLine1 =
+                request.AddressLine1;
+
+            profile.AddressLine2 =
+                request.AddressLine2;
+
+            profile.City =
+                request.City;
+
+            profile.District =
+                request.District;
+
+            profile.PostalCode =
+                request.PostalCode;
+
+            profile.ProfilePhotoUrl =
+                request.ProfilePhotoUrl;
+
+            profile.UpdatedAt =
+                DateTime.UtcNow;
+
+            return Task.FromResult(true);
+        }
     }
 }
