@@ -41,6 +41,41 @@ function RoleLandingPage({ requiredRole }) {
         <button type="button" onClick={handleLogout}>
           Sign out
         </button>
+        <div className="dashboard-actions">
+          {requiredRole === "STUDENT" && (
+            <button
+              type="button"
+              onClick={() =>
+                window.location.assign(
+                  "/student/profile"
+                )
+              }
+            >
+              View my profile
+            </button>
+          )}
+
+          {requiredRole === "ADMIN" && (
+            <button
+              type="button"
+              onClick={() =>
+                window.location.assign(
+                  "/admin/users"
+                )
+              }
+            >
+              Manage users
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={handleLogout}
+          >
+            Sign out
+          </button>
+        </div>
       </section>
     </main>
   );
