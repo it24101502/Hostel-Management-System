@@ -5,10 +5,15 @@ on:
     branches:
       - main
       - "feature/**"
+      - "integration/**"
+      - Sprint-1-QA-Testing
+      - deploy
 
   pull_request:
     branches:
       - main
+      - Sprint-1-QA-Testing
+      - deploy
 
 jobs:
   build-test-and-migrate:
