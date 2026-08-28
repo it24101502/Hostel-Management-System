@@ -101,6 +101,15 @@ jobs:
             --password="$MYSQL_ROOT_PASSWORD" \
             < database/migrations/004_update_fee_invoice_status_values.sql
 
+      - name: Run fee-reminder migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/005_create_fee_reminder_notifications.sql
+
       - name: Verify expected database tables
         run: |
           TABLE_COUNT=$(mysql \
@@ -124,13 +133,14 @@ jobs:
                   'student_profiles',
                   'guardian_contacts',
                   'fee_invoices',
-                  'fee_payments'
+                  'fee_payments',
+                  'fee_reminder_notifications'
                 );
             ")
 
-          echo "Expected 8 tables; found $TABLE_COUNT."
+          echo "Expected 9 tables; found $TABLE_COUNT."
 
-          if [ "$TABLE_COUNT" -ne 8 ]; then
+          if [ "$TABLE_COUNT" -ne 9 ]; then
             echo "Database tables currently available:"
 
             mysql \
@@ -170,6 +180,30 @@ jobs:
           echo "Invoice status default: $STATUS_DEFAULT"
 
           test "$STATUS_DEFAULT" = "UNPAID"
+
+      - name: Verify fee reminder configuration
+        run: |
+          REMINDER_DEFAULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT column_default
+              FROM information_schema.columns
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Management_System')
+                AND table_name =
+                    'fee_reminder_notifications'
+                AND column_name =
+                    'notification_status';
+            ")
+
+          echo "Reminder status default: $REMINDER_DEFAULT"
+
+          test "$REMINDER_DEFAULT" = "PENDING"
 
       - name: Restore dependencies
         run: dotnet restore backend/HostelManagement.sln

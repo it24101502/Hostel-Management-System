@@ -1,3 +1,4 @@
+using IdentityService.BackgroundServices;
 using IdentityService.Repositories;
 using IdentityService.Services;
 using IdentityService.Middleware;
@@ -20,6 +21,11 @@ builder.Services.Configure<LockoutOptions>(
 builder.Services.Configure<JwtOptions>(
     builder.Configuration.GetSection(
         JwtOptions.SectionName));
+
+builder.Services.Configure<
+    OverdueFeeJobOptions>(
+        builder.Configuration.GetSection(
+            OverdueFeeJobOptions.SectionName));
 
 builder.Services.AddOpenApi();
 
@@ -133,6 +139,24 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IFeePaymentService,
     FeePaymentService>();
+
+builder.Services.AddSingleton<TimeProvider>(
+    TimeProvider.System);
+
+builder.Services.AddScoped<
+    IOverdueFeeRepository,
+    OverdueFeeRepository>();
+
+builder.Services.AddScoped<
+    IFeeReminderSender,
+    LoggingFeeReminderSender>();
+
+builder.Services.AddScoped<
+    IOverdueFeeJobService,
+    OverdueFeeJobService>();
+
+builder.Services.AddHostedService<
+    OverdueFeeBackgroundService>();
 
 builder.Services.AddScoped<
     ILoginAuditRepository,
