@@ -2,6 +2,7 @@ using IdentityService.DTOs;
 using IdentityService.Authorization;
 using IdentityService.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace IdentityService.Controllers;
 
@@ -11,11 +12,14 @@ namespace IdentityService.Controllers;
 public class GuardianContactsController : ControllerBase
 {
     private readonly IGuardianContactService _contactService;
+    private readonly IStudentProfileService _profileService;
 
     public GuardianContactsController(
-        IGuardianContactService contactService)
+        IGuardianContactService contactService,
+        IStudentProfileService profileService)
     {
         _contactService = contactService;
+        _profileService = profileService;
     }
 
     // Retrieve all guardian and emergency contacts
@@ -24,6 +28,13 @@ public class GuardianContactsController : ControllerBase
         IReadOnlyList<GuardianContactResponse>>> GetContacts(
         ulong studentProfileId)
     {
+        ActionResult? authorizationResult =
+            await AuthorizeProfileAccessAsync(studentProfileId);
+
+        if (authorizationResult is not null)
+        {
+            return authorizationResult;
+        }
         try
         {
             IReadOnlyList<GuardianContactResponse> contacts =
@@ -48,6 +59,14 @@ public class GuardianContactsController : ControllerBase
             ulong studentProfileId,
             ulong contactId)
     {
+        ActionResult? authorizationResult =
+            await AuthorizeProfileAccessAsync(studentProfileId);
+
+        if (authorizationResult is not null)
+        {
+            return authorizationResult;
+        }
+
         GuardianContactResponse? contact =
             await _contactService.GetByIdAsync(
                 studentProfileId,
@@ -71,6 +90,13 @@ public class GuardianContactsController : ControllerBase
             ulong studentProfileId,
             CreateGuardianContactRequest request)
     {
+        ActionResult? authorizationResult =
+            await AuthorizeProfileAccessAsync(studentProfileId);
+
+        if (authorizationResult is not null)
+        {
+            return authorizationResult;
+        }
         try
         {
             GuardianContactResponse createdContact =
@@ -105,6 +131,13 @@ public class GuardianContactsController : ControllerBase
             ulong contactId,
             UpdateGuardianContactRequest request)
     {
+        ActionResult? authorizationResult =
+            await AuthorizeProfileAccessAsync(studentProfileId);
+
+        if (authorizationResult is not null)
+        {
+            return authorizationResult;
+        }
         GuardianContactResponse? updatedContact =
             await _contactService.UpdateAsync(
                 studentProfileId,
@@ -120,5 +153,46 @@ public class GuardianContactsController : ControllerBase
         }
 
         return Ok(updatedContact);
+    }
+    private async Task<ActionResult?>
+        AuthorizeProfileAccessAsync(
+            ulong studentProfileId)
+    {
+        // Staff can access contacts belonging to any student.
+        if (User.IsInRole("ADMIN") ||
+            User.IsInRole("WARDEN") ||
+            User.IsInRole("HOSTEL_MASTER"))
+        {
+            return null;
+        }
+
+        string? userIdValue =
+            User.FindFirst(
+                JwtRegisteredClaimNames.Sub)?.Value;
+
+        if (!ulong.TryParse(userIdValue, out ulong userId))
+        {
+            return Unauthorized(new
+            {
+                message =
+                    "The authenticated user ID is missing or invalid."
+            });
+        }
+
+        StudentProfileResponse? ownProfile =
+            await _profileService.GetOwnAsync(userId);
+
+        if (ownProfile?.StudentProfileId != studentProfileId)
+        {
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                new
+                {
+                    message =
+                        "Students may access only their own guardian and emergency contacts."
+                });
+        }
+
+        return null;
     }
 }
