@@ -24,3 +24,5 @@ frontend/dist/
 
 # Local frontend environment configuration
 frontend/.env.local
+# Runtime profile-photo uploads
+backend/IdentityService/wwwroot/uploads/profile-photos/

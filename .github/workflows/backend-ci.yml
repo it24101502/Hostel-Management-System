@@ -11,8 +11,45 @@ on:
       - main
 
 jobs:
-  build-and-test:
+  build-test-and-migrate:
     runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+
+        env:
+          MYSQL_ROOT_PASSWORD: TestRootPassword123!
+          MYSQL_ROOT_HOST: "%"
+
+        ports:
+          - 3306:3306
+
+        options: >-
+          --health-cmd="mysqladmin ping
+          -h 127.0.0.1
+          -u root
+          -pTestRootPassword123!"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      MYSQL_ROOT_PASSWORD: TestRootPassword123!
+
+      ConnectionStrings__DefaultConnection: >-
+        Server=127.0.0.1;
+        Port=3306;
+        Database=Hostel_Management_System;
+        User ID=root;
+        Password=TestRootPassword123!;
+
+      Jwt__Key: >-
+        ThisIsATemporarySecureJwtKeyForGitHubActionsTesting123456789
+
+      Jwt__Issuer: HostelManagement.IdentityService
+      Jwt__Audience: HostelManagement.Client
+      Jwt__ExpiryMinutes: 15
 
     steps:
       - name: Checkout repository
@@ -23,11 +60,230 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+
+      - name: Run authentication schema migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/001_create_auth_schema.sql
+
+      - name: Run audit-log migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/002_create_auth_audit_logs.sql
+
+      - name: Run student-profile and fee migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/003_create_student_profile_and_fee_schema.sql
+
+      - name: Run fee-status migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/004_update_fee_invoice_status_values.sql
+
+      - name: Run fee-reminder migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/005_create_fee_reminder_notifications.sql
+
+      - name: Run hostel-block migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/006_add_hostel_blocks.sql
+
+      - name: Verify expected database tables
+        run: |
+          TABLE_COUNT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT COUNT(*)
+              FROM information_schema.tables
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Management_System')
+                AND table_name IN
+                (
+                  'roles',
+                  'users',
+                  'user_sessions',
+                  'login_audit_logs',
+                  'student_profiles',
+                  'guardian_contacts',
+                  'fee_invoices',
+                  'fee_payments',
+                  'fee_reminder_notifications',
+                  'hostel_blocks'
+                );
+            ")
+
+          echo "Expected 10 tables; found $TABLE_COUNT."
+
+          if [ "$TABLE_COUNT" -ne 10 ]; then
+            echo "Database tables currently available:"
+
+            mysql \
+              --host=127.0.0.1 \
+              --port=3306 \
+              --user=root \
+              --password="$MYSQL_ROOT_PASSWORD" \
+              --execute="
+                SELECT table_schema, table_name
+                FROM information_schema.tables
+                WHERE LOWER(table_schema) =
+                      LOWER('Hostel_Management_System')
+                ORDER BY table_name;
+              "
+
+            exit 1
+          fi
+
+      - name: Insert fee-report sample data
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/tests/fee_status_report_sample_data.sql
+
+      - name: Verify fee report with sample data
+        run: |
+          REPORT_RESULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              USE Hostel_Management_System;
+
+              SELECT CONCAT(
+                COUNT(*), ',',
+                SUM(current_status = 'UNPAID'), ',',
+                SUM(current_status = 'PAID'), ',',
+                SUM(current_status = 'OVERDUE')
+              )
+              FROM
+              (
+                SELECT
+                  CASE
+                    WHEN fi.status = 'CANCELLED'
+                      THEN 'CANCELLED'
+                    WHEN fi.paid_amount >=
+                         fi.total_amount
+                      THEN 'PAID'
+                    WHEN fi.due_date < UTC_DATE()
+                      THEN 'OVERDUE'
+                    ELSE 'UNPAID'
+                  END AS current_status
+                FROM fee_invoices AS fi
+                INNER JOIN student_profiles AS sp
+                  ON sp.student_profile_id =
+                     fi.student_profile_id
+                INNER JOIN hostel_blocks AS hb
+                  ON hb.block_id =
+                     sp.hostel_block_id
+                WHERE hb.block_code = 'CI-A'
+              ) AS report_rows;
+            ")
+
+          echo "Report result: $REPORT_RESULT"
+          echo "Expected: 3,1,1,1"
+
+          test "$REPORT_RESULT" = "3,1,1,1"
+
+      - name: Verify fee invoice status configuration
+        run: |
+          STATUS_DEFAULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT column_default
+              FROM information_schema.columns
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Management_System')
+                AND table_name = 'fee_invoices'
+                AND column_name = 'status';
+            ")
+
+          echo "Invoice status default: $STATUS_DEFAULT"
+
+          test "$STATUS_DEFAULT" = "UNPAID"
+
+      - name: Verify fee reminder configuration
+        run: |
+          REMINDER_DEFAULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT column_default
+              FROM information_schema.columns
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Management_System')
+                AND table_name =
+                    'fee_reminder_notifications'
+                AND column_name =
+                    'notification_status';
+            ")
+
+          echo "Reminder status default: $REMINDER_DEFAULT"
+
+          test "$REMINDER_DEFAULT" = "PENDING"
+
       - name: Restore dependencies
         run: dotnet restore backend/HostelManagement.sln
 
       - name: Build backend
-        run: dotnet build backend/HostelManagement.sln --configuration Release --no-restore
+        run: >
+          dotnet build
+          backend/HostelManagement.sln
+          --configuration Release
+          --no-restore
 
-      - name: Run unit tests
-        run: dotnet test backend/HostelManagement.sln --configuration Release --no-build
+      - name: Run tests
+        run: >
+          dotnet test
+          backend/HostelManagement.sln
+          --configuration Release
+          --no-build

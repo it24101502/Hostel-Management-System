@@ -1,3 +1,4 @@
+using IdentityService.BackgroundServices;
 using IdentityService.Repositories;
 using IdentityService.Services;
 using IdentityService.Middleware;
@@ -20,6 +21,11 @@ builder.Services.Configure<LockoutOptions>(
 builder.Services.Configure<JwtOptions>(
     builder.Configuration.GetSection(
         JwtOptions.SectionName));
+
+builder.Services.Configure<
+    OverdueFeeJobOptions>(
+        builder.Configuration.GetSection(
+            OverdueFeeJobOptions.SectionName));
 
 builder.Services.AddOpenApi();
 
@@ -87,6 +93,72 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 builder.Services.AddScoped<
+    IAdminUserRepository,
+    AdminUserRepository>();
+
+builder.Services.AddScoped<
+    IAdminUserService,
+    AdminUserService>();
+
+builder.Services.AddScoped<
+    IGuardianContactRepository,
+    GuardianContactRepository>();
+
+builder.Services.AddScoped<
+    IGuardianContactService,
+    GuardianContactService>();
+
+builder.Services.AddScoped<
+    IProfileUniquenessRepository,
+    ProfileUniquenessRepository>();
+
+builder.Services.AddScoped<
+    IProfileUniquenessService,
+    ProfileUniquenessService>();
+
+builder.Services.AddScoped<
+    IStudentProfileRepository,
+    StudentProfileRepository>();
+
+builder.Services.AddScoped<
+    IStudentProfileService,
+    StudentProfileService>();
+
+builder.Services.AddScoped<
+    IFeeInvoiceRepository,
+    FeeInvoiceRepository>();
+
+builder.Services.AddScoped<
+    IFeeInvoiceService,
+    FeeInvoiceService>();
+
+builder.Services.AddScoped<
+    IFeePaymentRepository,
+    FeePaymentRepository>();
+
+builder.Services.AddScoped<
+    IFeePaymentService,
+    FeePaymentService>();
+
+builder.Services.AddSingleton<TimeProvider>(
+    TimeProvider.System);
+
+builder.Services.AddScoped<
+    IOverdueFeeRepository,
+    OverdueFeeRepository>();
+
+builder.Services.AddScoped<
+    IFeeReminderSender,
+    LoggingFeeReminderSender>();
+
+builder.Services.AddScoped<
+    IOverdueFeeJobService,
+    OverdueFeeJobService>();
+
+builder.Services.AddHostedService<
+    OverdueFeeBackgroundService>();
+
+builder.Services.AddScoped<
     ILoginAuditRepository,
     LoginAuditRepository>();
 
@@ -96,6 +168,14 @@ builder.Services.AddSingleton<
     IJwtTokenService,
     JwtTokenService>();
 
+builder.Services.AddScoped<
+    IFeeStatusReportRepository,
+    FeeStatusReportRepository>();
+
+builder.Services.AddScoped<
+    IFeeStatusReportService,
+    FeeStatusReportService>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -104,6 +184,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseCors("ReactFrontend");
 app.UseAuthentication();
 app.UseMiddleware<RoleAuthorizationMiddleware>();
