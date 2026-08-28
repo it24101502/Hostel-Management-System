@@ -307,3 +307,23 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+
+      - name: Validate Docker Compose configuration
+        env:
+          MYSQL_ROOT_PASSWORD: ci-validation-only-password
+          JWT_KEY: ci-validation-only-signing-key-at-least-32-characters
+        run: docker compose config --quiet
+
+      - name: Build backend Docker image
+        run: >
+          docker build
+          --file backend/IdentityService/Dockerfile
+          --tag hostel-identity-service:ci
+          .
+
+      - name: Build frontend Docker image
+        run: >
+          docker build
+          --file frontend/Dockerfile
+          --tag hostel-frontend:ci
+          .
