@@ -168,6 +168,14 @@ builder.Services.AddSingleton<
     IJwtTokenService,
     JwtTokenService>();
 
+builder.Services.AddScoped<
+    IFeeStatusReportRepository,
+    FeeStatusReportRepository>();
+
+builder.Services.AddScoped<
+    IFeeStatusReportService,
+    FeeStatusReportService>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
