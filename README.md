@@ -1,66 +1,77 @@
-# `feature/HMS-1-secure-login-role-based-access` — Hostel Management System
+# `Sprint-1-QA-Testing` Branch — Hostel Management System
 
-Feature branch for **HMS-1: Secure login and role-based access**.
+QA verification branch for **Sprint 1: Foundation — Identity & Users**.
 
-- **Priority:** Must
-- **Owner:** Member 1
-- **Module:** Authentication
-- **Related FRs:** FR-01–FR-05
-- **User story:** US01
-- **Sprint:** 1 (Foundation)
+## Sprint 1 Goal
 
-## Description
+Stand up the CI/CD pipeline, database schemas, and secure authentication with role-based access, so every module has a working, deployable foundation to build on.
 
-As a registered user (Student, Warden, or Administrator), I want to log in securely with my credentials and be granted access only to the features permitted for my role, so that hostel data stays protected and each user only sees what they are authorized to see.
+## Scope Under Test
 
-## Acceptance Criteria
+This branch is for testing the epics and tasks delivered in Sprint 1:
 
-- [ ] A user can log in using a valid email/username and password
-- [ ] An invalid email/username or password shows a clear error without revealing which field was wrong
-- [ ] After 5 consecutive failed attempts, the account is locked for a defined cooling-off period
-- [ ] On successful login, the system issues a signed session token (JWT)
-- [ ] The logged-in user's role (Student, Warden, Administrator) determines which menus and actions are visible
-- [ ] Every login attempt (success or failure) is logged with a timestamp
+- **HMS-1 — Secure login and role-based access** (US01, FR-01–FR-05)
+- **HMS-2 — Register and maintain student profiles (incl. fees)** (US02, FR-06–FR-09, FR-27–FR-30)
 
-## Definition of Done
+### Underlying tasks in scope
 
-- [ ] Login API and UI implemented and code-reviewed
+| ID | Task | Priority |
+| --- | --- | --- |
+| HMS-9 | Design auth DB schema (users, roles, sessions) | High |
+| HMS-10 | Implement login API (email/username + password) | Highest |
+| HMS-11 | Implement role-based access middleware | Highest |
+| HMS-12 | Implement account lockout after 5 failed attempts | Medium |
+| HMS-13 | Implement JWT issuance and validation | Highest |
+| HMS-14 | Implement authentication audit logging | Medium |
+| HMS-15 | Build login UI (React) | High |
+| HMS-17 | Design student profile & fee DB schema | High |
+| HMS-18 | Implement user CRUD API (Admin) | High |
+| HMS-19 | Implement student self-profile view/update API | Medium |
+| HMS-20 | Implement email & reg-number uniqueness validation | Medium |
+| HMS-21 | Implement guardian/emergency contact fields | Low |
+| HMS-22 | Implement fee invoice generation API | High |
+| HMS-23 | Implement fee payment recording & status update | High |
+| HMS-24 | Implement Overdue auto-flag + reminder job | Medium |
+| HMS-25 | Fee status report (per student / per block, downloadable) | High |
+| HMS-26 | Build Admin user-management UI | Medium |
+| HMS-27 | Build student profile UI | Medium |
+
+## Test Checklist
+
+### Authentication (HMS-1)
+- [ ] Valid email/username + password logs in successfully
+- [ ] Invalid credentials show a generic error (no field-specific hints)
+- [ ] 5 consecutive failed attempts locks the account for the cooling-off period
+- [ ] Successful login issues a signed JWT
+- [ ] Role determines visible menus/actions (Student / Warden / Administrator)
+- [ ] Every login attempt (success/failure) is logged with a timestamp
 - [ ] Passwords stored as salted hashes; all traffic over HTTPS
-- [ ] Role-based access control enforced on both frontend routes and backend endpoints
-- [ ] Unit and integration tests covering valid login, invalid login, lockout, and role restriction pass in CI
-- [ ] Authentication attempts visible in the audit log
-- [ ] Feature demoed and accepted by the product owner
+- [ ] RBAC enforced on both frontend routes and backend endpoints
 
-## Sub-tasks in this Branch
+### Student Profiles & Fees (HMS-2)
+- [ ] Admin can create, view, update, deactivate a user account
+- [ ] Deactivated users cannot log in
+- [ ] Student can view/update only permitted profile fields
+- [ ] Duplicate email or registration number is rejected server-side
+- [ ] Guardian/emergency contact info can be recorded and edited
+- [ ] Admin can generate a fee invoice with amount and due date
+- [ ] Recording a payment updates fee status (Unpaid / Paid / Overdue)
+- [ ] Unpaid fees auto-flip to Overdue after due date and trigger a reminder
+- [ ] Fee status report is downloadable, filterable by student or block
 
-| ID | Task | Priority | Points |
-| --- | --- | --- | --- |
-| HMS-9 | Design auth DB schema (users, roles, sessions) — incl. guardian/emergency contact fields | High | 3 |
-| HMS-10 | Implement login API (email/username + password) | Highest | 5 |
-| HMS-11 | Implement role-based access middleware | Highest | 5 |
-| HMS-12 | Implement account lockout after 5 failed attempts | Medium | 3 |
-| HMS-13 | Implement JWT issuance and validation | Highest | 5 |
-| HMS-14 | Implement authentication audit logging | Medium | 3 |
-| HMS-15 | Build login UI (React) | High | 5 |
-| — | Unit tests — auth service | Medium | 3 |
-| — | Integration tests — login → protected route access by role | Medium | 3 |
+## Test Types Covered
 
-## Implementation Notes
+- Unit tests — auth service, profile & fee module (CI-gated)
+- Integration tests — login → protected route access by role
+- Security tests — students cannot access/edit other students' data or restricted fields
 
-- **Stack:** ASP.NET + ADO.NET (Auth microservice), MySQL (users/roles/sessions schema), React (login UI)
-- Login endpoint must return a **generic** error for bad credentials — do not indicate whether the email or password was wrong (FR-01)
-- RBAC middleware must reject unauthorized role requests with `403` and must be applied to **all** protected routes, not just the frontend
-- Lockout duration should be configurable, not hardcoded
-- JWT validation must reject both expired and tampered tokens
-- Every login attempt (success/failure) needs a persisted log entry with user ID, outcome, and timestamp, queryable by an admin
+## Definition of Done Reminders
 
-## Related NFRs
+- All acceptance criteria demoed and accepted by the product owner
+- Unit + integration tests passing in CI
+- Actions visible in the audit log
+- Code reviewed and merged
 
-- NFR-02 (Security): role-based access, salted password hashes, HTTPS/TLS
-- NFR-03 (Data Integrity/Audit): all state-changing operations logged
-- NFR-09: server-side validation in addition to client-side
+## Reporting Bugs
 
-## Testing
-
-- Unit tests: valid login, invalid login, lockout trigger, lockout expiry
-- Integration tests: Student cannot access Admin-only endpoints; each role can access its permitted endpoints
+Log defects against the relevant HMS-xx task ID in JIRA with reproduction steps, expected vs. actual result, and environment details.
