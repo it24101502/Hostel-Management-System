@@ -1,52 +1,118 @@
 # `deploy` Branch — Hostel Management System
 
-This branch holds deployment configuration and pipeline definitions for the HMS microservices. It is not meant for feature development — merge stable, tested code here from `main` when preparing a release.
+This branch contains QA-approved, deployment-ready releases of the Hostel Management System. Feature development must not be performed directly on this branch.
 
-## Purpose
+## Sprint 1 Release
 
-- Docker build/compose definitions for each microservice (Auth, Rooms, Leave & Movement, Complaints, Fees, Notices)
-- Azure deployment configuration
-- GitHub Actions workflows for CI/CD (build, test, deploy)
-- Environment configuration templates (`.env.example`) for staging/production
+Sprint 1 provides the foundation for Identity, Users, Student Profiles, and Fees.
 
-## Architecture Notes
+### Included Features
 
-The system follows a microservice architecture per NFR-04: each service is independently deployable, so a failure in one service (e.g., Notices) should not cause a full-system outage. Services communicate over HTTPS/TLS (NFR-02).
+* Secure login with JWT authentication
+* Role-based access control
+* Account lockout after repeated failed login attempts
+* Login audit logging
+* Admin user management
+* Student profile management
+* Guardian and emergency contact management
+* Fee invoices, payments, overdue detection, reminders, and reports
+* React frontend
+* ASP.NET backend
+* MySQL database migrations
 
-| Service | Responsibility |
-| --- | --- |
-| Auth Service | Login, JWT issuance/validation, role-based access, audit logging |
-| User/Fee Service | Student & staff profiles, guardian contacts, fee invoices & payments |
-| Room Service | Room CRUD, allocation, transfer, occupancy status |
-| Leave & Movement Service | Leave requests, approvals, departure/return tracking |
-| Complaint Service | Complaint submission, triage, status tracking |
-| Notice Service | Notices & schedules, block filtering, auto-archive |
+## Container Architecture
 
-## Deployment Targets
+The Sprint 1 system uses Docker Compose with three services:
 
-- **Container platform:** Docker
-- **Cloud:** Azure
-- **Database:** MySQL (managed instance or containerized, per environment)
+| Service      | Technology      | Local Port |
+| ------------ | --------------- | ---------- |
+| Frontend     | React and Nginx | 5173       |
+| Identity API | ASP.NET 10      | 8080       |
+| Database     | MySQL 8.4       | 3307       |
 
-## CI/CD Pipeline (GitHub Actions)
+## Local Deployment
 
-The pipeline has been functional since Sprint 1 and runs on every PR and merge:
+Create the local environment file:
 
-1. Restore dependencies / build each service
-2. Run unit and integration tests
-3. Run Selenium end-to-end tests (leave lifecycle, etc.)
-4. Run JMeter load tests against critical endpoints (e.g. leave submission, ≤ 3s target per NFR-01)
-5. Build and push Docker images
-6. Deploy to the target environment (staging on merge to `deploy`, production on tagged release)
+```powershell
+Copy-Item .env.example .env
+```
 
-## Before Deploying
+Replace the example values in `.env` with secure local values. Never commit the real `.env` file.
 
-- [ ] All Sprint deliverables merged and passing CI on `main`
-- [ ] Security tests passed (auth, RBAC, profile/fee access control)
-- [ ] Environment variables and secrets configured (not committed)
-- [ ] Database migrations verified against a fresh schema
-- [ ] Monitoring/logging endpoints wired up (NFR-10 — logs/metrics for tracing)
+Build and start the system:
+
+```powershell
+docker compose up --detach --build
+docker compose ps
+```
+
+Open the frontend at:
+
+```text
+http://localhost:5173
+```
+
+Stop the system without deleting database data:
+
+```powershell
+docker compose down
+```
+
+## CI Pipeline
+
+GitHub Actions currently performs:
+
+1. MySQL startup and migration validation
+2. .NET dependency restoration
+3. Backend Release build
+4. Backend unit and integration tests
+5. Frontend dependency installation
+6. Frontend production build
+7. Docker Compose configuration validation
+8. Backend Docker image build
+9. Frontend Docker image build
+
+Automatic container-registry publishing and Azure deployment are planned deployment-stage tasks and are not yet enabled.
+
+## QA Verification
+
+Sprint 1 has been approved by QA with evidence covering:
+
+* Docker infrastructure
+* Unit tests and code coverage
+* Selenium login testing
+* JMeter tests with 20 and 50 users
+
+Evidence is available in:
+
+```text
+qa-sprint1-evidence/
+```
+
+GitHub Actions also passed on the QA-approved commit.
+
+## Deployment Status
+
+* [x] HMS-1 and HMS-2 integrated
+* [x] Backend tests passing
+* [x] Frontend production build passing
+* [x] Database migrations verified
+* [x] Docker Compose environment verified
+* [x] QA evidence uploaded
+* [x] QA approval received
+* [ ] Cloud staging resources configured
+* [ ] Deployment secrets configured in GitHub
+* [ ] HTTPS and public health monitoring configured
+* [ ] Docker images published to a container registry
+
+## Security
+
+* Secrets must be provided through environment variables.
+* The real `.env` file must never be committed.
+* Production JWT and database credentials must be stored using GitHub or cloud-platform secrets.
+* HTTPS/TLS must be enabled in the staging and production environments.
 
 ## Rollback
 
-Each microservice can be rolled back independently by redeploying its previous container image/tag, without affecting the other services.
+Until automated cloud deployment is configured, rollback is performed by redeploying the previous verified Git commit or Docker image tag.
