@@ -38,9 +38,6 @@ function RoleLandingPage({ requiredRole }) {
           <strong>{requiredRole}</strong> role.
         </p>
 
-        <button type="button" onClick={handleLogout}>
-          Sign out
-        </button>
         <div className="dashboard-actions">
           {requiredRole === "STUDENT" && (
             <button
