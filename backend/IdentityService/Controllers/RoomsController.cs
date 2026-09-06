@@ -3,6 +3,7 @@ using IdentityService.DTOs;
 using IdentityService.Exceptions;
 using IdentityService.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace IdentityService.Controllers;
 
@@ -22,9 +23,18 @@ public class RoomsController : ControllerBase
     public async Task<IActionResult> CreateRoom(
         [FromBody] CreateRoomRequest request)
     {
+        if (!TryGetAuthenticatedUserId(
+                out ulong administratorUserId))
+        {
+            return Unauthorized(new ErrorResponse
+            {
+            Message =
+                "The authenticated Administrator ID is missing or invalid."
+            });
+        }
         try
         {
-            var createdRoom = await _roomService.CreateAsync(request);
+            var createdRoom = await _roomService.CreateAsync(request, administratorUserId);
 
             return CreatedAtAction(
                 nameof(GetRoomById),
@@ -82,10 +92,19 @@ public class RoomsController : ControllerBase
         ulong roomId,
         [FromBody] UpdateRoomRequest request)
     {
+        if (!TryGetAuthenticatedUserId(
+                out ulong administratorUserId))
+        {
+            return Unauthorized(new ErrorResponse
+            {
+                Message =
+                    "The authenticated Administrator ID is missing or invalid."
+            });
+        }
         try
         {
             var updatedRoom =
-                await _roomService.UpdateAsync(roomId, request);
+                await _roomService.UpdateAsync(roomId, request, administratorUserId);
 
             if (updatedRoom is null)
             {
@@ -123,10 +142,19 @@ public class RoomsController : ControllerBase
     [HttpDelete("{roomId:long}")]
     public async Task<IActionResult> DeleteRoom(ulong roomId)
     {
+        if (!TryGetAuthenticatedUserId(
+                out ulong administratorUserId))
+        {
+            return Unauthorized(new ErrorResponse
+            {
+                Message =
+                    "The authenticated Administrator ID is missing or invalid."
+            });
+        }
         try
         {
             bool deleted =
-                await _roomService.DeleteAsync(roomId);
+                await _roomService.DeleteAsync(roomId, administratorUserId);
 
             if (!deleted)
             {
@@ -145,5 +173,17 @@ public class RoomsController : ControllerBase
                 Message = exception.Message
             });
         }
+    }
+    private bool TryGetAuthenticatedUserId(
+        out ulong userId)
+    {
+        string? userIdValue =
+            User.FindFirst(
+                JwtRegisteredClaimNames.Sub)
+                ?.Value;
+
+        return ulong.TryParse(
+            userIdValue,
+            out userId);
     }
 }

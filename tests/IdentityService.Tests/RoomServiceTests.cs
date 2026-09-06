@@ -12,7 +12,7 @@ public class RoomServiceTests
     public async Task CreateRoom_WithValidDetails_CreatesRoom()
     {
         var repository = new FakeRoomRepository();
-        var service = new RoomService(repository);
+        var service = new RoomService(repository, new FakeRoomAuditRepository());
 
         var request = new CreateRoomRequest
         {
@@ -22,7 +22,7 @@ public class RoomServiceTests
             BedCapacity = 4
         };
 
-        var result = await service.CreateAsync(request);
+        var result = await service.CreateAsync(request, 1);
 
         Assert.Equal((ulong)1, result.RoomId);
         Assert.Equal((ulong)1, result.BlockId);
@@ -38,7 +38,7 @@ public class RoomServiceTests
         repository.Rooms.Add(CreateRoom(1, "101"));
         repository.Rooms.Add(CreateRoom(2, "102"));
 
-        var service = new RoomService(repository);
+        var service = new RoomService(repository, new FakeRoomAuditRepository());
 
         var result = await service.GetAllAsync();
 
@@ -53,7 +53,7 @@ public class RoomServiceTests
         var repository = new FakeRoomRepository();
         repository.Rooms.Add(CreateRoom(10, "301"));
 
-        var service = new RoomService(repository);
+        var service = new RoomService(repository, new FakeRoomAuditRepository());
 
         var result = await service.GetByIdAsync(10);
 
@@ -68,7 +68,7 @@ public class RoomServiceTests
         var repository = new FakeRoomRepository();
         repository.Rooms.Add(CreateRoom(20, "401"));
 
-        var service = new RoomService(repository);
+        var service = new RoomService(repository, new FakeRoomAuditRepository());
 
         var request = new UpdateRoomRequest
         {
@@ -78,7 +78,7 @@ public class RoomServiceTests
             BedCapacity = 6
         };
 
-        var result = await service.UpdateAsync(20, request);
+        var result = await service.UpdateAsync(20, request, 1);
 
         Assert.NotNull(result);
         Assert.Equal("402", result.RoomNumber);
@@ -91,9 +91,9 @@ public class RoomServiceTests
         var repository = new FakeRoomRepository();
         repository.Rooms.Add(CreateRoom(30, "501"));
 
-        var service = new RoomService(repository);
+        var service = new RoomService(repository, new FakeRoomAuditRepository());
 
-        bool result = await service.DeleteAsync(30);
+        bool result = await service.DeleteAsync(30, 1);
 
         Assert.True(result);
         Assert.Empty(repository.Rooms);
@@ -109,11 +109,11 @@ public class RoomServiceTests
 
         repository.Rooms.Add(CreateRoom(50, "701"));
 
-        var service = new RoomService(repository);
+        var service = new RoomService(repository, new FakeRoomAuditRepository());
 
         var exception =
             await Assert.ThrowsAsync<OccupiedRoomDeletionException>(
-                () => service.DeleteAsync(50));
+                () => service.DeleteAsync(50, 1));
 
         Assert.Equal(
             "The room cannot be deleted because it has active occupants.",
@@ -124,10 +124,113 @@ public class RoomServiceTests
     }
 
     [Fact]
+    public async Task CreateRoom_RecordsAuditEntry()
+    {
+        var repository = new FakeRoomRepository();
+        var auditRepository =
+            new FakeRoomAuditRepository();
+
+        var service = new RoomService(
+            repository,
+            auditRepository);
+
+        var request = new CreateRoomRequest
+        {
+            BlockId = 1,
+            FloorNumber = 1,
+            RoomNumber = "801",
+            BedCapacity = 4
+        };
+
+        var result =
+            await service.CreateAsync(request, 99);
+
+        var audit = Assert.Single(
+            auditRepository.Records);
+
+        Assert.Equal(
+            (ulong)99,
+            audit.AdministratorUserId);
+
+        Assert.Equal(
+            RoomAuditActions.Create,
+            audit.Action);
+
+        Assert.Equal(result.RoomId, audit.Room.RoomId);
+        Assert.Equal("801", audit.Room.RoomNumber);
+    }
+
+    [Fact]
+    public async Task UpdateRoom_RecordsAuditEntry()
+    {
+        var repository = new FakeRoomRepository();
+        repository.Rooms.Add(CreateRoom(60, "901"));
+
+        var auditRepository =
+           new FakeRoomAuditRepository();
+
+        var service = new RoomService(
+            repository,
+            auditRepository);
+
+        var request = new UpdateRoomRequest
+        {
+            BlockId = 1,
+            FloorNumber = 9,
+            RoomNumber = "902",
+            BedCapacity = 6
+        };
+
+        await service.UpdateAsync(60, request, 99);
+
+        var audit = Assert.Single(
+            auditRepository.Records);
+
+        Assert.Equal(
+            RoomAuditActions.Update,
+            audit.Action);
+
+        Assert.Equal((ulong)60, audit.Room.RoomId);
+        Assert.Equal("902", audit.Room.RoomNumber);
+        Assert.Equal((ushort)6, audit.Room.BedCapacity);
+    }
+
+    [Fact]
+    public async Task DeleteRoom_RecordsAuditEntry()
+    {
+        var repository = new FakeRoomRepository();
+        repository.Rooms.Add(CreateRoom(70, "1001"));
+
+        var auditRepository =
+            new FakeRoomAuditRepository();
+
+        var service = new RoomService(
+            repository,
+            auditRepository);
+
+        bool deleted =
+            await service.DeleteAsync(70, 99);
+
+        Assert.True(deleted);
+
+        var audit = Assert.Single(
+            auditRepository.Records);
+
+        Assert.Equal(
+            RoomAuditActions.Delete,
+            audit.Action);
+
+        Assert.Equal((ulong)70, audit.Room.RoomId);
+        Assert.Equal("1001", audit.Room.RoomNumber);
+    }
+
+    [Fact]
     public async Task CreateRoom_WithZeroCapacity_ThrowsException()
     {
         var repository = new FakeRoomRepository();
-        var service = new RoomService(repository);
+        var service = new RoomService(
+                          repository,
+                          new FakeRoomAuditRepository());
 
         var request = new CreateRoomRequest
         {
@@ -139,7 +242,7 @@ public class RoomServiceTests
 
         var exception =
             await Assert.ThrowsAsync<InvalidRoomCapacityException>(
-                () => service.CreateAsync(request));
+                () => service.CreateAsync(request, 1));
 
         Assert.Equal(
             "Bed capacity must be greater than zero.",
@@ -154,7 +257,7 @@ public class RoomServiceTests
         var repository = new FakeRoomRepository();
         repository.Rooms.Add(CreateRoom(40, "601"));
 
-        var service = new RoomService(repository);
+        var service = new RoomService(repository, new FakeRoomAuditRepository());
 
         var request = new UpdateRoomRequest
         {
@@ -166,7 +269,7 @@ public class RoomServiceTests
 
         var exception =
             await Assert.ThrowsAsync<InvalidRoomCapacityException>(
-                () => service.UpdateAsync(40, request));
+                () => service.UpdateAsync(40, request, 1));
 
         Assert.Equal(
             "Bed capacity must be greater than zero.",
@@ -192,6 +295,28 @@ public class RoomServiceTests
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
+    }
+
+    private sealed class FakeRoomAuditRepository
+        : IRoomAuditRepository
+    {
+        public List<(
+            ulong AdministratorUserId,
+            string Action,
+            HostelRoom Room)> Records { get; } = [];
+
+        public Task RecordAsync(
+            ulong administratorUserId,
+            string action,
+            HostelRoom room)
+        {
+            Records.Add((
+                administratorUserId,
+                action,
+                room));
+
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeRoomRepository : IRoomRepository

@@ -98,6 +98,10 @@ builder.Services.AddScoped<
     RoomRepository>();
 
 builder.Services.AddScoped<
+    IRoomAuditRepository,
+    RoomAuditRepository>();
+
+builder.Services.AddScoped<
     IRoomService,
     RoomService>();
 

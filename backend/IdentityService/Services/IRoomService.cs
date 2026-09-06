@@ -8,11 +8,16 @@ public interface IRoomService
 
     Task<RoomResponse?> GetByIdAsync(ulong roomId);
 
-    Task<RoomResponse> CreateAsync(CreateRoomRequest request);
+    Task<RoomResponse> CreateAsync(
+        CreateRoomRequest request,
+        ulong administratorUserId);
 
     Task<RoomResponse?> UpdateAsync(
         ulong roomId,
-        UpdateRoomRequest request);
+        UpdateRoomRequest request,
+        ulong administratorUserId);
 
-    Task<bool> DeleteAsync(ulong roomId);
+    Task<bool> DeleteAsync(
+        ulong roomId,
+        ulong administratorUserId);
 }
