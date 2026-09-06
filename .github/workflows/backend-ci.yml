@@ -141,6 +141,15 @@ jobs:
             --password="$MYSQL_ROOT_PASSWORD" \
             < database/migrations/007_create_room_schema.sql
 
+      - name: Run student-room allocation migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            < database/migrations/008_create_student_room_allocations.sql
+
       - name: Verify expected database tables
         run: |
           TABLE_COUNT=$(mysql \
@@ -167,13 +176,14 @@ jobs:
                   'fee_payments',
                   'fee_reminder_notifications',
                   'hostel_blocks',
-                  'hostel_rooms'
+                  'hostel_rooms',
+                  'student_room_allocations'
                 );
             ")
 
-          echo "Expected 11 tables; found $TABLE_COUNT."
+          echo "Expected 12 tables; found $TABLE_COUNT."
 
-          if [ "$TABLE_COUNT" -ne 11 ]; then
+          if [ "$TABLE_COUNT" -ne 12 ]; then
             echo "Database tables currently available:"
 
             mysql \

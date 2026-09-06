@@ -89,10 +89,20 @@ public class RoomService : IRoomService
 
     public async Task<bool> DeleteAsync(ulong roomId)
     {
-        var existingRoom = await _roomRepository.GetByIdAsync(roomId);
+        var existingRoom =
+            await _roomRepository.GetByIdAsync(roomId);
 
-        return existingRoom is not null &&
-               await _roomRepository.DeleteAsync(roomId);
+        if (existingRoom is null)
+        {
+            return false;
+        }
+
+        if (await _roomRepository.HasActiveOccupantsAsync(roomId))
+        {
+            throw new OccupiedRoomDeletionException();
+        }
+
+        return await _roomRepository.DeleteAsync(roomId);
     }
 
     private static void EnsureCapacityIsValid(ushort bedCapacity)

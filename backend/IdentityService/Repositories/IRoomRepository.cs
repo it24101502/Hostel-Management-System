@@ -23,5 +23,7 @@ public interface IRoomRepository
         ulong roomId,
         UpdateRoomRequest request);
 
+    Task<bool> HasActiveOccupantsAsync(ulong roomId);
+
     Task<bool> DeleteAsync(ulong roomId);
 }

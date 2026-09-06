@@ -251,6 +251,32 @@ public class RoomRepository : IRoomRepository
         return affectedRows > 0;
     }
 
+    public async Task<bool> HasActiveOccupantsAsync(ulong roomId)
+    {
+    const string sql = """
+        SELECT EXISTS
+        (
+            SELECT 1
+            FROM student_room_allocations
+            WHERE room_id = @roomId
+        );
+        """;
+
+    await using var connection =
+        new MySqlConnection(_connectionString);
+
+    await connection.OpenAsync();
+
+    await using var command =
+        new MySqlCommand(sql, connection);
+
+    command.Parameters.AddWithValue("@roomId", roomId);
+
+    object? result = await command.ExecuteScalarAsync();
+
+    return Convert.ToInt32(result) == 1;
+    }
+
     public async Task<bool> DeleteAsync(ulong roomId)
     {
         const string query = """

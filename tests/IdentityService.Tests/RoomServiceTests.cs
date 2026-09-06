@@ -100,6 +100,30 @@ public class RoomServiceTests
     }
 
     [Fact]
+    public async Task DeleteRoom_WithActiveOccupants_ThrowsException()
+    {
+        var repository = new FakeRoomRepository
+        {
+            HasActiveOccupants = true
+        };
+
+        repository.Rooms.Add(CreateRoom(50, "701"));
+
+        var service = new RoomService(repository);
+
+        var exception =
+            await Assert.ThrowsAsync<OccupiedRoomDeletionException>(
+                () => service.DeleteAsync(50));
+
+        Assert.Equal(
+            "The room cannot be deleted because it has active occupants.",
+            exception.Message);
+
+        Assert.Single(repository.Rooms);
+        Assert.Equal((ulong)50, repository.Rooms[0].RoomId);
+    }
+
+    [Fact]
     public async Task CreateRoom_WithZeroCapacity_ThrowsException()
     {
         var repository = new FakeRoomRepository();
@@ -178,6 +202,8 @@ public class RoomServiceTests
 
         public bool DuplicateLocationExists { get; set; }
 
+        public bool HasActiveOccupants { get; set; }
+
         public Task<IReadOnlyList<HostelRoom>> GetAllAsync()
         {
             IReadOnlyList<HostelRoom> result = Rooms;
@@ -249,6 +275,11 @@ public class RoomServiceTests
             room.UpdatedAt = DateTime.UtcNow;
 
             return Task.FromResult(true);
+        }
+
+        public Task<bool> HasActiveOccupantsAsync(ulong roomId)
+        {
+            return Task.FromResult(HasActiveOccupants);
         }
 
         public Task<bool> DeleteAsync(ulong roomId)

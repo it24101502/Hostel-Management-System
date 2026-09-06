@@ -123,16 +123,27 @@ public class RoomsController : ControllerBase
     [HttpDelete("{roomId:long}")]
     public async Task<IActionResult> DeleteRoom(ulong roomId)
     {
-        bool deleted = await _roomService.DeleteAsync(roomId);
-
-        if (!deleted)
+        try
         {
-            return NotFound(new ErrorResponse
+            bool deleted =
+                await _roomService.DeleteAsync(roomId);
+
+            if (!deleted)
             {
-                Message = "Room was not found."
+                return NotFound(new ErrorResponse
+                {
+                    Message = "Room was not found."
+                });
+            }
+
+            return NoContent();
+        }
+        catch (OccupiedRoomDeletionException exception)
+        {
+        return Conflict(new ErrorResponse
+            {
+                Message = exception.Message
             });
         }
-
-        return NoContent();
     }
 }
