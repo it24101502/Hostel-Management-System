@@ -53,16 +53,29 @@ function RoleLandingPage({ requiredRole }) {
           )}
 
           {requiredRole === "ADMIN" && (
-            <button
-              type="button"
-              onClick={() =>
-                window.location.assign(
-                  "/admin/users"
-                )
-              }
-            >
-              Manage users
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  window.location.assign(
+                    "/admin/users"
+                  )
+                }
+              >
+                Manage users
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  window.location.assign(
+                    "/admin/rooms"
+                  )
+                }
+              >
+                Manage rooms
+              </button>
+            </>
           )}
 
           <button
