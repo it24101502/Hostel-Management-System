@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   AdminApiError,
   createAdminUser,
+  createStudentProfile,
   updateAdminUser
 } from "./adminUserApi.js";
 
@@ -40,7 +41,18 @@ function AdminUserForm({
       lastName: user?.lastName ?? "",
       phoneNumber: user?.phoneNumber ?? "",
       password: "",
-      roleId: user?.roleId?.toString() ?? "4"
+      roleId: user?.roleId?.toString() ?? "4",
+      registrationNumber: "",
+      dateOfBirth: "",
+      gender: "",
+      addressLine1: "",
+      addressLine2: "",
+      city: "",
+      district: "",
+      postalCode: "",
+      programmeName: "",
+      facultyName: "",
+      academicYear: ""
     });
 
   const [validationErrors, setValidationErrors] =
@@ -51,6 +63,18 @@ function AdminUserForm({
 
   const [isSaving, setIsSaving] =
     useState(false);
+
+  const [
+    pendingCreatedUser,
+    setPendingCreatedUser
+  ] = useState(null);
+
+  const isCreatingStudent =
+    !isEditing &&
+    (
+      pendingCreatedUser !== null ||
+      formData.roleId === "4"
+    );
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -110,6 +134,7 @@ function AdminUserForm({
 
     if (
       !isEditing &&
+      !pendingCreatedUser &&
       formData.password.length < 8
     ) {
       errors.password =
@@ -118,6 +143,36 @@ function AdminUserForm({
 
     if (!formData.roleId) {
       errors.roleId = "Select a role.";
+    }
+
+    if (isCreatingStudent) {
+      if (!formData.registrationNumber.trim()) {
+        errors.registrationNumber =
+          "Registration number is required.";
+      }
+
+      if (!formData.programmeName.trim()) {
+        errors.programmeName =
+          "Programme name is required.";
+      }
+
+      if (!formData.facultyName.trim()) {
+        errors.facultyName =
+          "Faculty name is required.";
+      }
+
+      const academicYear =
+        Number(formData.academicYear);
+
+      if (
+        !formData.academicYear ||
+        !Number.isInteger(academicYear) ||
+        academicYear < 1 ||
+        academicYear > 10
+      ) {
+        errors.academicYear =
+          "Academic year must be between 1 and 10.";
+      }
     }
 
     setValidationErrors(errors);
@@ -136,29 +191,74 @@ function AdminUserForm({
 
     setIsSaving(true);
 
+    let createdUserForProfile =
+      pendingCreatedUser;
+
     try {
-      const savedUser = isEditing
-        ? await updateAdminUser(
-            user.userId,
-            formData
-          )
-        : await createAdminUser(formData);
+      let savedUser;
+
+      if (isEditing) {
+        savedUser = await updateAdminUser(
+          user.userId,
+          formData
+        );
+      } else {
+        savedUser =
+          pendingCreatedUser ??
+          await createAdminUser(formData);
+
+        if (isCreatingStudent) {
+          createdUserForProfile = savedUser;
+          setPendingCreatedUser(savedUser);
+
+          await createStudentProfile(
+            savedUser.userId,
+            {
+              ...formData,
+              email: savedUser.email
+            }
+          );
+        }
+      }
+
+      setPendingCreatedUser(null);
 
       onSaved(
         savedUser,
         isEditing
           ? "User account updated successfully."
-          : "User account created successfully."
+          : isCreatingStudent
+            ? "Student account and profile created successfully."
+            : "User account created successfully."
       );
     } catch (error) {
-      if (
+      const apiMessage =
         error instanceof AdminApiError &&
         error.status !== 401
+          ? error.message
+          : "The request could not be completed.";
+
+      if (
+        createdUserForProfile &&
+        isCreatingStudent
       ) {
-        setErrorMessage(error.message);
+        setPendingCreatedUser(
+          createdUserForProfile
+        );
+
+        setErrorMessage(
+          "The user account was created, but the " +
+          "student profile could not be created. " +
+          apiMessage +
+          " Correct the profile information and " +
+          "submit again; the account will not be duplicated."
+        );
       } else {
         setErrorMessage(
-          "Unable to save the user account. Please try again."
+          error instanceof AdminApiError &&
+          error.status !== 401
+            ? error.message
+            : "Unable to save the user account. Please try again."
         );
       }
     } finally {
@@ -398,6 +498,229 @@ function AdminUserForm({
               )}
             </div>
           )}
+          {isCreatingStudent && (
+            <>
+              <div className="admin-password-field">
+                <h3>Student profile</h3>
+                <span>
+                  These details will be linked to the new
+                  Student account.
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="registrationNumber">
+                  Registration number
+                </label>
+
+                <input
+                  id="registrationNumber"
+                  name="registrationNumber"
+                  type="text"
+                  maxLength={50}
+                  value={formData.registrationNumber}
+                  onChange={handleChange}
+                  aria-invalid={Boolean(
+                    validationErrors.registrationNumber
+                  )}
+                  placeholder="IT26000001"
+                />
+
+                {validationErrors.registrationNumber && (
+                  <p className="field-error">
+                    {
+                      validationErrors
+                        .registrationNumber
+                    }
+                  </p>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="dateOfBirth">
+                  Date of birth
+                </label>
+
+                <input
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="gender">
+                  Gender
+                </label>
+
+                <select
+                  id="gender"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                >
+                  <option value="">Not provided</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="MALE">Male</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="academicYear">
+                  Academic year
+                </label>
+
+                <input
+                  id="academicYear"
+                  name="academicYear"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={formData.academicYear}
+                  onChange={handleChange}
+                  aria-invalid={Boolean(
+                    validationErrors.academicYear
+                  )}
+                  placeholder="3"
+                />
+
+                {validationErrors.academicYear && (
+                  <p className="field-error">
+                    {validationErrors.academicYear}
+                  </p>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="programmeName">
+                  Programme name
+                </label>
+
+                <input
+                  id="programmeName"
+                  name="programmeName"
+                  type="text"
+                  maxLength={150}
+                  value={formData.programmeName}
+                  onChange={handleChange}
+                  aria-invalid={Boolean(
+                    validationErrors.programmeName
+                  )}
+                  placeholder="BSc (Hons) in Information Technology"
+                />
+
+                {validationErrors.programmeName && (
+                  <p className="field-error">
+                    {validationErrors.programmeName}
+                  </p>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="facultyName">
+                  Faculty name
+                </label>
+
+                <input
+                  id="facultyName"
+                  name="facultyName"
+                  type="text"
+                  maxLength={150}
+                  value={formData.facultyName}
+                  onChange={handleChange}
+                  aria-invalid={Boolean(
+                    validationErrors.facultyName
+                  )}
+                  placeholder="Faculty of Computing"
+                />
+
+                {validationErrors.facultyName && (
+                  <p className="field-error">
+                    {validationErrors.facultyName}
+                  </p>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="addressLine1">
+                  Address line 1
+                </label>
+
+                <input
+                  id="addressLine1"
+                  name="addressLine1"
+                  type="text"
+                  maxLength={255}
+                  value={formData.addressLine1}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="addressLine2">
+                  Address line 2
+                </label>
+
+                <input
+                  id="addressLine2"
+                  name="addressLine2"
+                  type="text"
+                  maxLength={255}
+                  value={formData.addressLine2}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="city">
+                  City
+                </label>
+
+                <input
+                  id="city"
+                  name="city"
+                  type="text"
+                  maxLength={100}
+                  value={formData.city}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="district">
+                  District
+                </label>
+
+                <input
+                  id="district"
+                  name="district"
+                  type="text"
+                  maxLength={100}
+                  value={formData.district}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="postalCode">
+                  Postal code
+                </label>
+
+                <input
+                  id="postalCode"
+                  name="postalCode"
+                  type="text"
+                  maxLength={20}
+                  value={formData.postalCode}
+                  onChange={handleChange}
+                />
+              </div>
+            </>
+          )}
+
         </div>
 
         <div className="admin-form-actions">
@@ -417,9 +740,13 @@ function AdminUserForm({
           >
             {isSaving
               ? "Saving..."
-              : isEditing
-                ? "Save changes"
-                : "Create account"}
+              : pendingCreatedUser
+                ? "Retry profile creation"
+                : isEditing
+                  ? "Save changes"
+                  : isCreatingStudent
+                    ? "Create student account"
+                    : "Create account"}
           </button>
         </div>
       </form>
