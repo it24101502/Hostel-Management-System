@@ -132,6 +132,16 @@ jobs:
             --password="$MYSQL_ROOT_PASSWORD" \
             < database/migrations/006_add_hostel_blocks.sql
 
+      - name: Run student-profile backfill migration
+        run: |
+          mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --database=Hostel_Management_System \
+            < database/migrations/008_backfill_missing_student_profiles.sql
+
       - name: Verify expected database tables
         run: |
           TABLE_COUNT=$(mysql \
