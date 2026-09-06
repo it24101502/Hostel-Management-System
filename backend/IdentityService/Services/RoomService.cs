@@ -33,6 +33,8 @@ public class RoomService : IRoomService
     public async Task<RoomResponse> CreateAsync(
         CreateRoomRequest request)
     {
+        EnsureCapacityIsValid(request.BedCapacity);
+
         await EnsureBlockExistsAsync(request.BlockId);
 
         await EnsureLocationIsUniqueAsync(
@@ -54,6 +56,8 @@ public class RoomService : IRoomService
         ulong roomId,
         UpdateRoomRequest request)
     {
+        EnsureCapacityIsValid(request.BedCapacity);
+
         var existingRoom = await _roomRepository.GetByIdAsync(roomId);
 
         if (existingRoom is null)
@@ -89,6 +93,14 @@ public class RoomService : IRoomService
 
         return existingRoom is not null &&
                await _roomRepository.DeleteAsync(roomId);
+    }
+
+    private static void EnsureCapacityIsValid(ushort bedCapacity)
+    {
+        if (bedCapacity == 0)
+        {
+            throw new InvalidRoomCapacityException();
+        }
     }
 
     private async Task EnsureBlockExistsAsync(ulong blockId)

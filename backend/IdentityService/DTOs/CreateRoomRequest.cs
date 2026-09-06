@@ -12,5 +12,9 @@ public class CreateRoomRequest
     [StringLength(20)]
     public string RoomNumber { get; set; } = string.Empty;
 
+    [Range(
+        1,
+        ushort.MaxValue,
+        ErrorMessage = "Bed capacity must be greater than zero.")]
     public ushort BedCapacity { get; set; }
 }

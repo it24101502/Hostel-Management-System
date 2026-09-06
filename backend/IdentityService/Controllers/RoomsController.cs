@@ -45,8 +45,14 @@ public class RoomsController : ControllerBase
                 Message = exception.Message
             });
         }
+        catch (InvalidRoomCapacityException exception)
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Message = exception.Message
+            });
+        }
     }
-
     [HttpGet]
     public async Task<IActionResult> GetRooms()
     {
@@ -103,6 +109,13 @@ public class RoomsController : ControllerBase
             return BadRequest(new ErrorResponse
             {
                 Message = exception.Message
+            });
+        }
+        catch (InvalidRoomCapacityException exception)
+        {
+            return BadRequest(new ErrorResponse
+        {
+            Message = exception.Message
             });
         }
     }

@@ -2,6 +2,7 @@ using IdentityService.DTOs;
 using IdentityService.Models;
 using IdentityService.Repositories;
 using IdentityService.Services;
+using IdentityService.Exceptions;
 
 namespace IdentityService.Tests;
 
@@ -96,6 +97,58 @@ public class RoomServiceTests
 
         Assert.True(result);
         Assert.Empty(repository.Rooms);
+    }
+
+    [Fact]
+    public async Task CreateRoom_WithZeroCapacity_ThrowsException()
+    {
+        var repository = new FakeRoomRepository();
+        var service = new RoomService(repository);
+
+        var request = new CreateRoomRequest
+        {
+            BlockId = 1,
+            FloorNumber = 1,
+            RoomNumber = "101",
+            BedCapacity = 0
+        };
+
+        var exception =
+            await Assert.ThrowsAsync<InvalidRoomCapacityException>(
+                () => service.CreateAsync(request));
+
+        Assert.Equal(
+            "Bed capacity must be greater than zero.",
+            exception.Message);
+
+        Assert.Empty(repository.Rooms);
+    }
+
+    [Fact]
+    public async Task UpdateRoom_WithZeroCapacity_ThrowsException()
+    {
+        var repository = new FakeRoomRepository();
+        repository.Rooms.Add(CreateRoom(40, "601"));
+
+        var service = new RoomService(repository);
+
+        var request = new UpdateRoomRequest
+        {
+            BlockId = 1,
+            FloorNumber = 6,
+            RoomNumber = "601",
+            BedCapacity = 0
+        };
+
+        var exception =
+            await Assert.ThrowsAsync<InvalidRoomCapacityException>(
+                () => service.UpdateAsync(40, request));
+
+        Assert.Equal(
+            "Bed capacity must be greater than zero.",
+            exception.Message);
+
+        Assert.Equal((ushort)4, repository.Rooms[0].BedCapacity);
     }
 
     private static HostelRoom CreateRoom(
