@@ -1,118 +1,98 @@
-# `deploy` Branch — Hostel Management System
+# Hostel Management System (HMS)
 
-This branch contains QA-approved, deployment-ready releases of the Hostel Management System. Feature development must not be performed directly on this branch.
+**SE3022 – Case Study Project** | Year 3, Semester 1, 2026
 
-## Sprint 1 Release
+A microservice-based web platform that connects students, wardens and administrators through one reliable workflow for authentication, room allocation, leave & movement, complaints, fees, and notices.
 
-Sprint 1 provides the foundation for Identity, Users, Student Profiles, and Fees.
+## Team
 
-### Included Features
+| Student ID | Name | Primary Module |
+| --- | --- | --- |
+| IT24101502 | Suwasthikka S | Daily operations (complaints / schedules) |
+| IT24100245 | Peiris M P V P | Leave & movement |
+| IT24102190 | De Silva D S P S N | Rooms & allocation |
+| IT24101844 | Premarathna P A I B | Users & fees |
 
-* Secure login with JWT authentication
-* Role-based access control
-* Account lockout after repeated failed login attempts
-* Login audit logging
-* Admin user management
-* Student profile management
-* Guardian and emergency contact management
-* Fee invoices, payments, overdue detection, reminders, and reports
-* React frontend
-* ASP.NET backend
-* MySQL database migrations
+## The Problem
 
-## Container Architecture
+Manual hostel processes create avoidable risk: leave permission is hard to track, wardens can't see movements in real time, room/fee/complaint records are fragmented, and timetables and notices are easy to miss. One missing record can affect student safety.
 
-The Sprint 1 system uses Docker Compose with three services:
+## Proposed Solution
 
-| Service      | Technology      | Local Port |
-| ------------ | --------------- | ---------- |
-| Frontend     | React and Nginx | 5173       |
-| Identity API | ASP.NET 10      | 8080       |
-| Database     | MySQL 8.4       | 3307       |
+One platform connecting five core areas:
 
-## Local Deployment
+1. **Student & access** — profiles, roles and secure login
+2. **Rooms** — room availability and allocation
+3. **Leave & movement** — requests, approval, departure and return
+4. **Daily operations** — schedules, complaints, fees and notices
+5. **Reports** — live occupancy, leave, fee and complaint reports
 
-Create the local environment file:
+## Roles & Scope
 
-```powershell
-Copy-Item .env.example .env
-```
+| Role | Capabilities |
+| --- | --- |
+| Student | Request leave, view room & fees, submit complaints, see schedules/notices |
+| Warden / Master | Approve leave, record movements, manage schedules, monitor complaints |
+| Administrator | Manage users, rooms, fees and notices; generate reports |
 
-Replace the example values in `.env` with secure local values. Never commit the real `.env` file.
+**In first release:** Authentication, Rooms, Leave, Movement, Timetables, Complaints, Fees, Notices, Reports
+**Explicitly out of scope:** Biometric hardware, GPS tracking, native mobile apps, direct banking integration
 
-Build and start the system:
+## Tech Stack
 
-```powershell
-docker compose up --detach --build
-docker compose ps
-```
+- **Frontend:** React.js
+- **Backend:** ASP.NET + ADO.NET (microservices)
+- **Database:** MySQL
+- **Infrastructure:** Docker, Azure
+- **Source control / CI-CD:** GitHub, GitHub Actions (functional from Sprint 1)
+- **Testing:** Unit & integration tests, Selenium (E2E), JMeter (load)
 
-Open the frontend at:
+## Architecture
 
-```text
-http://localhost:5173
-```
+The system is built as independently deployable microservices (one per module — Auth, Rooms, Leave & Movement, Complaints, Fees, Notices) so that failure in one service does not cause a full-system outage (NFR-04).
 
-Stop the system without deleting database data:
+## Non-Functional Highlights
 
-```powershell
-docker compose down
-```
+- Requests complete within ≤ 3 seconds under expected load (NFR-01)
+- Role-based access, salted password hashes, HTTPS/TLS everywhere (NFR-02)
+- All state-changing operations recorded in an auditable activity log (NFR-03)
+- 99% uptime target during the academic term (NFR-05)
+- Server-side validation on all form input (NFR-09)
 
-## CI Pipeline
+## Repository Branches
 
-GitHub Actions currently performs:
+| Branch | Purpose |
+| --- | --- |
+| `main` | Stable, release-ready code |
+| `deploy` | Deployment configuration and pipeline for staging/production |
+| `Sprint-1-QA-Testing` | QA verification for Sprint 1 deliverables |
+| `feature/HMS-1-...` | Feature branch — Secure login & role-based access |
+| `feature/HMS-2-...` | Feature branch — Register & maintain student profiles |
 
-1. MySQL startup and migration validation
-2. .NET dependency restoration
-3. Backend Release build
-4. Backend unit and integration tests
-5. Frontend dependency installation
-6. Frontend production build
-7. Docker Compose configuration validation
-8. Backend Docker image build
-9. Frontend Docker image build
+## Sprint Plan
 
-Automatic container-registry publishing and Azure deployment are planned deployment-stage tasks and are not yet enabled.
+| Sprint | Theme |
+| --- | --- |
+| 1 | Foundation — Identity & Users |
+| 2 | Room Management |
+| 3 | Leave & Movement |
+| 4 | Complaints, Fees, Notices & Reporting |
 
-## QA Verification
+## Product Backlog (Must-priority core)
 
-Sprint 1 has been approved by QA with evidence covering:
+| ID | User Story | Priority | Owner |
+| --- | --- | --- | --- |
+| US01 | Secure login and role-based access | Must | Member 1 |
+| US02 | Register and maintain student profiles | Must | Member 1 |
+| US03 | Manage rooms, beds and capacity | Must | Member 2 |
+| US04 | Allocate or transfer students | Must | Member 2 |
+| US05 | Submit a complete leave request | Must | Member 3 |
+| US06 | Approve or reject leave with a reason | Must | Member 3 |
+| US07 | Submit and track complaints | Must | Member 4 |
+| US08 | Publish schedules and notices | Should | Member 4 |
 
-* Docker infrastructure
-* Unit tests and code coverage
-* Selenium login testing
-* JMeter tests with 20 and 50 users
+Full JIRA backlog: 16+ stories, acceptance criteria, priority, estimate, owner and sprint — see project documentation.
 
-Evidence is available in:
+## AI Usage Disclosure
 
-```text
-qa-sprint1-evidence/
-```
-
-GitHub Actions also passed on the QA-approved commit.
-
-## Deployment Status
-
-* [x] HMS-1 and HMS-2 integrated
-* [x] Backend tests passing
-* [x] Frontend production build passing
-* [x] Database migrations verified
-* [x] Docker Compose environment verified
-* [x] QA evidence uploaded
-* [x] QA approval received
-* [ ] Cloud staging resources configured
-* [ ] Deployment secrets configured in GitHub
-* [ ] HTTPS and public health monitoring configured
-* [ ] Docker images published to a container registry
-
-## Security
-
-* Secrets must be provided through environment variables.
-* The real `.env` file must never be committed.
-* Production JWT and database credentials must be stored using GitHub or cloud-platform secrets.
-* HTTPS/TLS must be enabled in the staging and production environments.
-
-## Rollback
-
-Until automated cloud deployment is configured, rollback is performed by redeploying the previous verified Git commit or Docker image tag.
+Per the assignment brief, direct use of AI to generate or complete project code is prohibited. AI tools were used only for research and planning support, with disclosure.
