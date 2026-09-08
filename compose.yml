@@ -1,0 +1,61 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: hostel-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - hostel-mysql-data:/var/lib/mysql
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  identity-api:
+    build:
+      context: .
+      dockerfile: backend/IdentityService/Dockerfile
+    image: hostel-identity-service:sprint1
+    container_name: hostel-identity-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      Jwt__Key: ${JWT_KEY}
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Management_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
+      OverdueFeeJob__Enabled: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080
+    image: hostel-frontend:sprint1
+    container_name: hostel-frontend-web
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - identity-api
+
+volumes:
+  hostel-mysql-data:
