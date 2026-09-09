@@ -38,7 +38,7 @@ public class GuardianContactServiceTests
         Assert.Equal("Kamal Perera", result.FullName);
         Assert.Equal("0771234567", result.PhoneNumber);
         Assert.True(result.IsPrimary);
-        Assert.True(result.IsActive);
+        Assert.False(result.IsActive);
     }
 
     [Fact]
