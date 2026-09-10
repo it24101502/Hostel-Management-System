@@ -1,143 +1,113 @@
-# `deploy` Branch — Hostel Management System
+# `Sprint-2-QA-Testing` Branch — Hostel Management System
 
-This branch contains QA-approved, deployment-ready releases of the Hostel Management System. Feature development must not be performed directly on this branch.
+This branch contains QA verification work for **Sprint 2 (Room Management)**. It does not contain feature code — it documents and stores the test plan, test cases, test scripts/collections, and evidence used to verify the Sprint 2 deliverables before they are merged toward `main`/`deploy`.
 
-## Sprint 1 Release
+Feature development for Sprint 2 happens on the developer's feature branches; this branch tracks QA sign-off against that work.
 
-Sprint 1 provides the foundation for Identity, Users, Student Profiles, and Fees.
+## Sprint 2 Scope Under Test
 
-### Included Features
+Sprint 2 covers **Room Management**, made up of two epics:
 
-* Secure login with JWT authentication
-* Role-based access control
-* Account lockout after repeated failed login attempts
-* Login audit logging
-* Admin user management
-* Student profile management
-* Guardian and emergency contact management
-* Fee invoices, payments, overdue detection, reminders, and reports
-* React frontend
-* ASP.NET backend
-* MySQL database migrations
+| Epic | Description | Jira Range |
+| --- | --- | --- |
+| HMS-3 | Manage rooms, beds and capacity | HMS-28 – HMS-32 |
+| HMS-4 | Allocate or transfer students | HMS-33 – HMS-38 |
 
-## Container Architecture
+### HMS-3 — Manage rooms, beds and capacity (HMS-28 to HMS-32)
 
-The Sprint 1 system uses Docker Compose with three services:
+| ID | Item |
+| --- | --- |
+| HMS-28 | Design room/bed DB schema |
+| HMS-29 | Implement room CRUD API |
+| HMS-30 | Implement capacity validation (reject invalid/negative values) |
+| HMS-31 | Implement delete-guard for occupied rooms |
+| HMS-32 | Build room management UI |
 
-| Service      | Technology      | Local Port |
-| ------------ | --------------- | ---------- |
-| Frontend     | React and Nginx | 5173       |
-| Identity API | ASP.NET 10      | 8080       |
-| Database     | MySQL 8.4       | 3307       |
+### HMS-4 — Allocate or transfer students (HMS-33 to HMS-38)
 
-## Local Deployment
+| ID | Item |
+| --- | --- |
+| HMS-33 | Implement student allocation API |
+| HMS-34 | Implement capacity-enforcement check on allocation |
+| HMS-35 | Implement transfer-between-rooms logic |
+| HMS-36 | Implement auto-update of occupancy status (Available/Full) |
+| HMS-37 | Live occupancy report filterable by block/floor |
+| HMS-38 | Build allocation/transfer UI |
 
-Create the local environment file:
+## Testing Approach
+
+This branch verifies each item above with the following test types:
+
+- **API / CRUD tests** — Postman collection + automated assertions covering room create, read, update, delete, and the HMS-30/HMS-31 validation and delete-guard rules
+- **UI / E2E tests** — Selenium (NUnit) scripts covering room management (HMS-32) and allocation/transfer (HMS-38) user flows, including over-capacity error handling
+- **Performance tests** — JMeter plans targeting the room/allocation endpoints against the NFR-01 target (≤ 3 second response time under expected load)
+- **Coverage** — `dotnet test` with Coverlet against the room and allocation services
+- **Dynamic report test** — verification of the HMS-37 live occupancy report against seeded sample data, filtered by block and floor
+- **Event/integration test** — verification that a room allocation/transfer publishes the expected domain event on the Kafka message bus and that it is consumed correctly (per the SRS event-driven microservice architecture)
+
+## Repository Structure
+
+```
+qa/sprint2/
+├── test-plan.md              # Full test case list mapped to HMS-28–38 acceptance criteria
+├── postman/                  # Postman collection(s) for room + allocation API tests
+├── selenium/                 # NUnit + Selenium UI test project
+├── jmeter/                   # .jmx test plans and exported HTML reports
+├── coverage/                 # Coverage reports (dotnet test / Coverlet output)
+├── kafka-events/             # Notes/scripts verifying allocation event publish & consume
+├── standup-log/              # Daily QA stand-up entries for Sprint 2
+└── test-summary.md           # Final pass/fail summary, bugs found, and sign-off notes
+```
+
+## Environment
+
+| Tool | Purpose |
+| --- | --- |
+| Postman / Newman | API request collections and CI-runnable assertions |
+| Selenium WebDriver (NUnit) | UI/E2E test automation |
+| Apache JMeter | Load/performance testing |
+| Coverlet | Code coverage collection for `dotnet test` |
+| Docker (local Kafka + Zookeeper) | Verifying async domain events without shared infra |
+| MySQL | Seeding sample room/block/allocation data for report tests |
+
+## How to Run
 
 ```powershell
-Copy-Item .env.example .env
+# API tests
+newman run qa/sprint2/postman/HMS-Sprint2.postman_collection.json
+
+# UI tests
+dotnet test qa/sprint2/selenium/HMS.UITests.csproj
+
+# Unit/integration tests with coverage
+dotnet test backend/HostelManagement.sln --collect:"XPlat Code Coverage"
+
+# Performance test (JMeter, non-GUI mode)
+jmeter -n -t qa/sprint2/jmeter/room-allocation-load.jmx -l qa/sprint2/jmeter/results.jtl -e -o qa/sprint2/jmeter/report
 ```
 
-Replace the example values in `.env` with secure local values. Never commit the real `.env` file.
+## Sprint 2 QA Status
 
-Build and start the system:
+- [ ] HMS-28–32 (rooms) test cases written
+- [ ] HMS-33–38 (allocation/transfer) test cases written
+- [ ] API/CRUD tests passing
+- [ ] UI/Selenium tests passing
+- [ ] JMeter results meet NFR-01 (≤ 3s)
+- [ ] Coverage report generated
+- [ ] HMS-37 occupancy report verified against sample data
+- [ ] Kafka allocation event verified end-to-end
+- [ ] Bugs logged in Jira with severity/priority
+- [ ] Daily stand-up log complete for the sprint
+- [ ] Test summary compiled and PR opened toward `main`/`deploy`
 
-```powershell
-docker compose up --detach --build
-docker compose ps
-```
+## Known Issues / Blockers
 
-Open the frontend at:
+_Update as testing progresses — e.g. endpoints not yet available, Kafka producer not wired up, environment instability._
 
-```text
-http://localhost:5173
-```
+## Owner
 
-Stop the system without deleting database data:
+QA Engineer — Sprint 2: _Suwasthikka S (IT24101502)_
 
-```powershell
-docker compose down
-```
+## AI Usage Disclosure
 
-## CI Pipeline
-
-GitHub Actions currently performs:
-
-1. MySQL startup and migration validation
-2. .NET dependency restoration
-3. Backend Release build
-4. Backend unit and integration tests
-5. Frontend dependency installation
-6. Frontend production build
-7. Docker Compose configuration validation
-8. Backend Docker image build
-9. Frontend Docker image build
-
-Automatic container-registry publishing and Azure deployment are planned deployment-stage tasks and are not yet enabled.
-
-## QA Verification
-
-Sprint 1 has been approved by QA with evidence covering:
-
-* Docker infrastructure
-* Unit tests and code coverage
-* Selenium login testing
-* JMeter tests with 20 and 50 users
-
-Evidence is available in:
-
-```text
-qa-sprint1-evidence/
-```
-
-GitHub Actions also passed on the QA-approved commit.
-
-## Deployment Status
-
-* [x] HMS-1 and HMS-2 integrated
-* [x] Backend tests passing
-* [x] Frontend production build passing
-* [x] Database migrations verified
-* [x] Docker Compose environment verified
-* [x] QA evidence uploaded
-* [x] QA approval received
-* [ ] Cloud staging resources configured
-* [ ] Deployment secrets configured in GitHub
-* [ ] HTTPS and public health monitoring configured
-* [ ] Docker images published to a container registry
-
-## Security
-
-* Secrets must be provided through environment variables.
-* The real `.env` file must never be committed.
-* Production JWT and database credentials must be stored using GitHub or cloud-platform secrets.
-* HTTPS/TLS must be enabled in the staging and production environments.
-
-## Rollback
-
-Until automated cloud deployment is configured, rollback is performed by redeploying the previous verified Git commit or Docker image tag.
-
-## Accommodation service
-
-Room and accommodation management is separated from the Identity Service.
-
-| Component | Local port | Database |
-|---|---:|---|
-| Identity Service | 8080 | `Hostel_Management_System` |
-| Accommodation Service | 8081 | `Hostel_Accommodation_System` |
-| Frontend | 5173 | Not applicable |
-
-The Identity Service handles authentication, users, student profiles, and JWT creation.
-
-The Accommodation Service handles:
-
-- Hostel blocks
-- Rooms and bed capacity
-- Student-room allocations
-- Room audit logs
-
-The Accommodation Service validates JWTs issued by the Identity Service. Both services must use the same JWT key, issuer, and audience.
-
-Accommodation database migrations are located in:
-
-`database/accommodation/migrations`
+Per the assignment brief, AI was used only for research and planning support (structuring this QA branch, test plan format, and testing approach) — not to generate or complete project or test code.
