@@ -12,7 +12,16 @@ services:
       - "3307:3306"
     volumes:
       - hostel-mysql-data:/var/lib/mysql
-      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+      - ./database/migrations/001_create_auth_schema.sql:/docker-entrypoint-initdb.d/001_create_auth_schema.sql:ro
+      - ./database/migrations/002_create_auth_audit_logs.sql:/docker-entrypoint-initdb.d/002_create_auth_audit_logs.sql:ro
+      - ./database/migrations/003_create_student_profile_and_fee_schema.sql:/docker-entrypoint-initdb.d/003_create_student_profile_and_fee_schema.sql:ro
+      - ./database/migrations/004_update_fee_invoice_status_values.sql:/docker-entrypoint-initdb.d/004_update_fee_invoice_status_values.sql:ro
+      - ./database/migrations/005_create_fee_reminder_notifications.sql:/docker-entrypoint-initdb.d/005_create_fee_reminder_notifications.sql:ro
+      - ./database/migrations/006_add_hostel_blocks.sql:/docker-entrypoint-initdb.d/006_add_hostel_blocks.sql:ro
+      - ./database/accommodation/migrations/001_create_accommodation_database.sql:/docker-entrypoint-initdb.d/101_create_accommodation_database.sql:ro
+      - ./database/accommodation/migrations/002_create_rooms.sql:/docker-entrypoint-initdb.d/102_create_accommodation_rooms.sql:ro
+      - ./database/accommodation/migrations/003_create_student_room_allocations.sql:/docker-entrypoint-initdb.d/103_create_accommodation_allocations.sql:ro
+      - ./database/accommodation/migrations/004_create_room_audit_logs.sql:/docker-entrypoint-initdb.d/104_create_accommodation_audit_logs.sql:ro
     healthcheck:
       test:
         [
@@ -43,12 +52,31 @@ services:
       mysql:
         condition: service_healthy
 
+  accommodation-api:
+    build:
+      context: .
+      dockerfile: backend/AccommodationService/Dockerfile
+    image: hostel-accommodation-service:sprint2
+    container_name: hostel-accommodation-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      Jwt__Key: ${JWT_KEY}
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Accommodation_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
+    ports:
+      - "8081:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
       args:
         VITE_API_BASE_URL: http://localhost:8080
+        VITE_ACCOMMODATION_API_BASE_URL: http://localhost:8081
     image: hostel-frontend:sprint1
     container_name: hostel-frontend-web
     restart: unless-stopped
@@ -56,6 +84,7 @@ services:
       - "5173:80"
     depends_on:
       - identity-api
+      - accommodation-api
 
 volumes:
   hostel-mysql-data:

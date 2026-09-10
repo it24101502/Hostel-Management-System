@@ -1,6 +1,6 @@
-namespace IdentityService.DTOs;
+﻿namespace AccommodationService.Models;
 
-public class RoomResponse
+public class HostelRoom
 {
     public ulong RoomId { get; set; }
 
@@ -22,3 +22,4 @@ public class RoomResponse
 
     public DateTime UpdatedAt { get; set; }
 }
+

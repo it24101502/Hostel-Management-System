@@ -1,7 +1,7 @@
-using IdentityService.Models;
+﻿using AccommodationService.Models;
 using MySqlConnector;
 
-namespace IdentityService.Repositories;
+namespace AccommodationService.Repositories;
 
 public class RoomAuditRepository : IRoomAuditRepository
 {

@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace IdentityService.DTOs;
+namespace AccommodationService.DTOs;
 
-public class UpdateRoomRequest
+public class CreateRoomRequest
 {
     public ulong BlockId { get; set; }
 
@@ -18,3 +18,4 @@ public class UpdateRoomRequest
         ErrorMessage = "Bed capacity must be greater than zero.")]
     public ushort BedCapacity { get; set; }
 }
+

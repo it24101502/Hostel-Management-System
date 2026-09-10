@@ -1,6 +1,6 @@
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ??
-  "http://localhost:5220";
+  import.meta.env.VITE_ACCOMMODATION_API_BASE_URL ??
+  "http://localhost:8081";
 
 export class RoomApiError extends Error {
   constructor(message, status, details = {}) {

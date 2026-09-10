@@ -1,6 +1,6 @@
-using IdentityService.Models;
+﻿using AccommodationService.Models;
 
-namespace IdentityService.Repositories;
+namespace AccommodationService.Repositories;
 
 public interface IRoomAuditRepository
 {

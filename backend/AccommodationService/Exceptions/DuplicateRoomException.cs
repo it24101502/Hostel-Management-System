@@ -1,4 +1,4 @@
-namespace IdentityService.Exceptions;
+﻿namespace AccommodationService.Exceptions;
 
 public class DuplicateRoomException : Exception
 {
@@ -7,3 +7,4 @@ public class DuplicateRoomException : Exception
     {
     }
 }
+

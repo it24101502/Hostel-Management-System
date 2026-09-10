@@ -1,6 +1,6 @@
-using IdentityService.DTOs;
+﻿using AccommodationService.DTOs;
 
-namespace IdentityService.Services;
+namespace AccommodationService.Services;
 
 public interface IRoomService
 {

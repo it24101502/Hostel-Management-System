@@ -1,8 +1,8 @@
-using IdentityService.DTOs;
-using IdentityService.Models;
+﻿using AccommodationService.DTOs;
+using AccommodationService.Models;
 using MySqlConnector;
 
-namespace IdentityService.Repositories;
+namespace AccommodationService.Repositories;
 
 public class RoomRepository : IRoomRepository
 {
@@ -316,3 +316,4 @@ public class RoomRepository : IRoomRepository
         };
     }
 }
+

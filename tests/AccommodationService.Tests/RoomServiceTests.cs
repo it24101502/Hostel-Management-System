@@ -1,10 +1,10 @@
-using IdentityService.DTOs;
-using IdentityService.Models;
-using IdentityService.Repositories;
-using IdentityService.Services;
-using IdentityService.Exceptions;
+﻿using AccommodationService.DTOs;
+using AccommodationService.Models;
+using AccommodationService.Repositories;
+using AccommodationService.Services;
+using AccommodationService.Exceptions;
 
-namespace IdentityService.Tests;
+namespace AccommodationService.Tests;
 
 public class RoomServiceTests
 {
@@ -423,3 +423,4 @@ public class RoomServiceTests
         }
     }
 }
+

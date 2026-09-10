@@ -1,4 +1,4 @@
-namespace IdentityService.Exceptions;
+﻿namespace AccommodationService.Exceptions;
 
 public class OccupiedRoomDeletionException : Exception
 {

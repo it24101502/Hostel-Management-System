@@ -1,4 +1,4 @@
-USE Hostel_Management_System;
+USE Hostel_Accommodation_System;
 
 CREATE TABLE hostel_rooms
 (

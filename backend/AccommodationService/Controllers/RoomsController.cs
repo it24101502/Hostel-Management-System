@@ -1,11 +1,11 @@
-using IdentityService.Authorization;
-using IdentityService.DTOs;
-using IdentityService.Exceptions;
-using IdentityService.Services;
+﻿using AccommodationService.Authorization;
+using AccommodationService.DTOs;
+using AccommodationService.Exceptions;
+using AccommodationService.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.JsonWebTokens;
 
-namespace IdentityService.Controllers;
+namespace AccommodationService.Controllers;
 
 [ApiController]
 [Route("api/admin/rooms")]
@@ -187,3 +187,4 @@ public class RoomsController : ControllerBase
             out userId);
     }
 }
+

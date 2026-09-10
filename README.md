@@ -116,3 +116,28 @@ GitHub Actions also passed on the QA-approved commit.
 ## Rollback
 
 Until automated cloud deployment is configured, rollback is performed by redeploying the previous verified Git commit or Docker image tag.
+
+## Accommodation service
+
+Room and accommodation management is separated from the Identity Service.
+
+| Component | Local port | Database |
+|---|---:|---|
+| Identity Service | 8080 | `Hostel_Management_System` |
+| Accommodation Service | 8081 | `Hostel_Accommodation_System` |
+| Frontend | 5173 | Not applicable |
+
+The Identity Service handles authentication, users, student profiles, and JWT creation.
+
+The Accommodation Service handles:
+
+- Hostel blocks
+- Rooms and bed capacity
+- Student-room allocations
+- Room audit logs
+
+The Accommodation Service validates JWTs issued by the Identity Service. Both services must use the same JWT key, issuer, and audience.
+
+Accommodation database migrations are located in:
+
+`database/accommodation/migrations`

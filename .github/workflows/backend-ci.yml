@@ -132,34 +132,20 @@ jobs:
             --password="$MYSQL_ROOT_PASSWORD" \
             < database/migrations/006_add_hostel_blocks.sql
 
-      - name: Run hostel-room migration
+      - name: Run accommodation database migrations
         run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            < database/migrations/007_create_room_schema.sql
+          for migration in database/accommodation/migrations/*.sql; do
+            echo "Running $migration"
 
-      - name: Run student-room allocation migration
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            < database/migrations/008_create_student_room_allocations.sql
+            mysql \
+              --host=127.0.0.1 \
+              --port=3306 \
+              --user=root \
+              --password="$MYSQL_ROOT_PASSWORD" \
+              < "$migration"
+          done
 
-      - name: Run room-audit migration
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            < database/migrations/009_create_room_audit_logs.sql
-
-      - name: Verify expected database tables
+      - name: Verify expected identity database tables
         run: |
           TABLE_COUNT=$(mysql \
             --host=127.0.0.1 \
@@ -184,16 +170,13 @@ jobs:
                   'fee_invoices',
                   'fee_payments',
                   'fee_reminder_notifications',
-                  'hostel_blocks',
-                  'hostel_rooms',
-                  'student_room_allocations',
-                  'room_audit_logs'
+                  'hostel_blocks'
                 );
             ")
 
-          echo "Expected 13 tables; found $TABLE_COUNT."
+          echo "Expected 10 identity tables; found $TABLE_COUNT."
 
-          if [ "$TABLE_COUNT" -ne 13 ]; then
+          if [ "$TABLE_COUNT" -ne 10 ]; then
             echo "Database tables currently available:"
 
             mysql \
@@ -212,6 +195,50 @@ jobs:
             exit 1
           fi
 
+      - name: Verify expected accommodation database tables
+        run: |
+          TABLE_COUNT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT COUNT(*)
+              FROM information_schema.tables
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Accommodation_System')
+                AND table_name IN
+                (
+                  'hostel_blocks',
+                  'hostel_rooms',
+                  'student_room_allocations',
+                  'room_audit_logs'
+                );
+            ")
+
+          echo "Expected 4 accommodation tables; found $TABLE_COUNT."
+
+          if [ "$TABLE_COUNT" -ne 4 ]; then
+            echo "Accommodation database tables currently available:"
+
+            mysql \
+              --host=127.0.0.1 \
+              --port=3306 \
+              --user=root \
+              --password="$MYSQL_ROOT_PASSWORD" \
+              --execute="
+                SELECT table_schema, table_name
+                FROM information_schema.tables
+                WHERE LOWER(table_schema) =
+                      LOWER('Hostel_Accommodation_System')
+                ORDER BY table_name;
+              "
+
+            exit 1
+          fi
+
       - name: Insert fee-report sample data
         run: |
           mysql \
@@ -221,7 +248,7 @@ jobs:
             --password="$MYSQL_ROOT_PASSWORD" \
             < database/tests/fee_status_report_sample_data.sql
 
-      - name: Verify hostel-room schema
+      - name: Verify accommodation room schema
         run: |
           ROOM_COLUMN_RESULT=$(mysql \
             --host=127.0.0.1 \
@@ -239,7 +266,7 @@ jobs:
               )
               FROM information_schema.columns
               WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Management_System')
+                    LOWER('Hostel_Accommodation_System')
                 AND table_name = 'hostel_rooms';
             ")
 
@@ -264,7 +291,7 @@ jobs:
               )
               FROM information_schema.table_constraints
               WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Management_System')
+                    LOWER('Hostel_Accommodation_System')
                 AND table_name = 'hostel_rooms';
             ")
 

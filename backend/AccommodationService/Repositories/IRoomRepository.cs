@@ -1,7 +1,7 @@
-using IdentityService.DTOs;
-using IdentityService.Models;
+﻿using AccommodationService.DTOs;
+using AccommodationService.Models;
 
-namespace IdentityService.Repositories;
+namespace AccommodationService.Repositories;
 
 public interface IRoomRepository
 {
@@ -27,3 +27,4 @@ public interface IRoomRepository
 
     Task<bool> DeleteAsync(ulong roomId);
 }
+

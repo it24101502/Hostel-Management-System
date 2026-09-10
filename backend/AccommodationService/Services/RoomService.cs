@@ -1,9 +1,9 @@
-using IdentityService.DTOs;
-using IdentityService.Exceptions;
-using IdentityService.Models;
-using IdentityService.Repositories;
+﻿using AccommodationService.DTOs;
+using AccommodationService.Exceptions;
+using AccommodationService.Models;
+using AccommodationService.Repositories;
 
-namespace IdentityService.Services;
+namespace AccommodationService.Services;
 
 public class RoomService : IRoomService
 {
@@ -194,3 +194,4 @@ public class RoomService : IRoomService
         };
     }
 }
+

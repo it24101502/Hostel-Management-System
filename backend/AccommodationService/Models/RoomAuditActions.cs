@@ -1,4 +1,4 @@
-namespace IdentityService.Models;
+﻿namespace AccommodationService.Models;
 
 public static class RoomAuditActions
 {

@@ -94,18 +94,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 builder.Services.AddScoped<
-    IRoomRepository,
-    RoomRepository>();
-
-builder.Services.AddScoped<
-    IRoomAuditRepository,
-    RoomAuditRepository>();
-
-builder.Services.AddScoped<
-    IRoomService,
-    RoomService>();
-
-builder.Services.AddScoped<
     IAdminUserRepository,
     AdminUserRepository>();
 
