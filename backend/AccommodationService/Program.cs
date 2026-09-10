@@ -81,6 +81,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IRoomRepository, RoomRepository>();
 builder.Services.AddScoped<IRoomAuditRepository, RoomAuditRepository>();
 builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddScoped<IRoomAllocationRepository,RoomAllocationRepository>();
+builder.Services.AddScoped<IRoomAllocationService,RoomAllocationService>();
 
 var app = builder.Build();
 
