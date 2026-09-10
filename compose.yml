@@ -22,6 +22,7 @@ services:
       - ./database/accommodation/migrations/002_create_rooms.sql:/docker-entrypoint-initdb.d/102_create_accommodation_rooms.sql:ro
       - ./database/accommodation/migrations/003_create_student_room_allocations.sql:/docker-entrypoint-initdb.d/103_create_accommodation_allocations.sql:ro
       - ./database/accommodation/migrations/004_create_room_audit_logs.sql:/docker-entrypoint-initdb.d/104_create_accommodation_audit_logs.sql:ro
+      - ./database/accommodation/migrations/005_create_allocation_audit_logs.sql:/docker-entrypoint-initdb.d/105_create_allocation_audit_logs.sql:ro
     healthcheck:
       test:
         [
