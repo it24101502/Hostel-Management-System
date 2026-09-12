@@ -1,3 +1,5 @@
+import AppShell from "./AppShell.jsx";
+
 import { useEffect, useMemo, useState } from "react";
 import {
   allocateStudent,
@@ -7,11 +9,14 @@ import {
   transferStudent
 } from "./allocationApi.js";
 import { getRooms } from "./roomApi.js";
+import { getActiveStudentProfiles } from
+  "./studentProfileApi.js";
 
 const emptyFilters = { blockId: "", floorNumber: "" };
 
 function AllocationsPage() {
   const [allocations, setAllocations] = useState([]);
+  const [students, setStudents] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [allOccupancy, setAllOccupancy] = useState([]);
   const [occupancy, setOccupancy] = useState([]);
@@ -43,18 +48,25 @@ function AllocationsPage() {
     setErrorMessage("");
 
     try {
-      const [allocationData, roomData, allReport, filteredReport] =
-        await Promise.all([
-          getAllocations(),
-          getRooms(),
-          getOccupancyReport(),
-          getOccupancyReport(reportFilters)
-        ]);
+      const [
+        allocationData,
+        roomData,
+        allReport,
+        filteredReport,
+        studentData
+      ] = await Promise.all([
+        getAllocations(),
+        getRooms(),
+        getOccupancyReport(),
+        getOccupancyReport(reportFilters),
+        getActiveStudentProfiles()
+      ]);
 
       setAllocations(allocationData);
       setRooms(roomData);
       setAllOccupancy(allReport);
       setOccupancy(filteredReport);
+      setStudents(studentData);
     } catch (error) {
       setErrorMessage(
         error instanceof AllocationApiError && error.status !== 401
@@ -79,6 +91,35 @@ function AllocationsPage() {
       }),
     [rooms, occupancyByRoom]
   );
+
+  const studentById = useMemo(
+    () =>
+      new Map(
+        students.map((student) => [
+          Number(student.studentProfileId),
+          student
+        ])
+      ),
+    [students]
+  );
+
+  const availableStudents = useMemo(() => {
+    const allocatedStudentIds = new Set(
+      allocations.map((allocation) =>
+        Number(allocation.studentProfileId)
+      )
+    );
+
+    return students.filter(
+      (student) =>
+        !allocatedStudentIds.has(
+          Number(student.studentProfileId)
+        )
+    );
+  }, [students, allocations]);
+
+  const selectedStudent =
+    studentById.get(Number(studentId));
 
   const blocks = useMemo(() => {
     const uniqueBlocks = new Map();
@@ -195,7 +236,22 @@ function AllocationsPage() {
   }
 
   return (
-    <main className="admin-users-page allocation-page">
+    <AppShell
+      activePage="allocations"
+      eyebrow="ACCOMMODATION CONTROL"
+      title="Allocation Command Centre"
+      description="Manage student room allocations and monitor live occupancy."
+      actions={
+        <button
+          type="button"
+          className="primary-button"
+          onClick={openAllocate}
+        >
+          + New allocation
+        </button>
+      }
+    >
+      <div className="admin-users-page allocation-page">
       <header className="admin-header">
         <div className="admin-brand">
           <span>HMS</span>
@@ -248,8 +304,44 @@ function AllocationsPage() {
             <form onSubmit={saveAllocation}>
               <div className="admin-form-grid">
                 <div className="form-group">
-                  <label htmlFor="studentId">Student profile ID</label>
-                  <input id="studentId" type="number" min="1" required disabled={panelMode === "transfer"} value={studentId} onChange={(event) => setStudentId(event.target.value)} placeholder="Enter student profile ID" />
+                  <label htmlFor="studentId">Student</label>
+
+                  {panelMode === "transfer" ? (
+                    <input
+                      id="studentId"
+                      type="text"
+                      disabled
+                      value={
+                        selectedStudent
+                          ? selectedStudent.username
+                          : `Profile #${studentId}`
+                      }
+                    />
+                  ) : (
+                    <select
+                      id="studentId"
+                      required
+                      value={studentId}
+                      onChange={(event) =>
+                        setStudentId(event.target.value)
+                      }
+                    >
+                      <option value="">
+                        {availableStudents.length > 0
+                          ? "Select an active student"
+                          : "No unallocated students available"}
+                      </option>
+
+                      {availableStudents.map((student) => (
+                        <option
+                          key={student.studentProfileId}
+                          value={student.studentProfileId}
+                        >
+                          {student.username}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div className="form-group">
                   <label htmlFor="roomId">Destination room</label>
@@ -407,7 +499,7 @@ function AllocationsPage() {
               <table className="admin-users-table allocation-table">
                 <thead>
                   <tr>
-                    <th>Student ID</th>
+                    <th>Student</th>
                     <th>Room</th>
                     <th>Block</th>
                     <th>Floor</th>
@@ -419,7 +511,23 @@ function AllocationsPage() {
                 <tbody>
                   {allocations.map((allocation) => (
                     <tr key={allocation.allocationId}>
-                      <td><strong>#{allocation.studentProfileId}</strong></td>
+                      <td>
+                        <div className="room-block-cell">
+                          <strong>
+                            {studentById.get(
+                              Number(allocation.studentProfileId)
+                            )?.username ??
+                              `Profile #${allocation.studentProfileId}`}
+                          </strong>
+
+                          <small>
+                            {studentById.get(
+                              Number(allocation.studentProfileId)
+                            )?.email ??
+                              "Identity record unavailable"}
+                          </small>
+                        </div>
+                      </td>
                       <td>{allocation.roomNumber}</td>
                       <td>{allocation.blockCode}</td>
                       <td>{allocation.floorNumber}</td>
@@ -444,7 +552,8 @@ function AllocationsPage() {
           )}
         </section>
       </section>
-    </main>
+      </div>
+    </AppShell>
   );
 }
 

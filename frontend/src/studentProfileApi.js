@@ -122,3 +122,11 @@ export async function uploadOwnStudentPhoto(photo) {
 
   return data;
 }
+export function getActiveStudentProfiles() {
+  return sendRequest(
+    "/api/student-profiles",
+    {
+      method: "GET"
+    }
+  );
+}

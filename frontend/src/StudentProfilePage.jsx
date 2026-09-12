@@ -1,3 +1,5 @@
+import AppShell from "./AppShell.jsx";
+
 import { useEffect, useState } from "react";
 import {
   ApiError,
@@ -41,6 +43,8 @@ function StudentProfilePage() {
     useState(false);
   const [successMessage, setSuccessMessage] =
     useState("");
+  const [photoLoadFailed, setPhotoLoadFailed] =
+  useState(false);
 
   useEffect(() => {
     const role =
@@ -96,91 +100,63 @@ function StudentProfilePage() {
 
   if (isLoading) {
     return (
-      <main className="profile-page">
-        <section className="profile-state-card">
-          <div className="loading-spinner" />
-          <p>Loading your profile...</p>
+      <AppShell
+        activePage="profile"
+        eyebrow="MY ACCOUNT"
+        title="Student Profile"
+        description="View your information and update permitted contact fields."
+      >
+        <section className="profile-shell-state">
+          <div className="profile-shell-state-card">
+            <div className="loading-spinner" />
+            <h2>Loading your profile</h2>
+            <p>Please wait while we retrieve your information.</p>
+          </div>
         </section>
-      </main>
+      </AppShell>
     );
   }
 
   if (errorMessage || !profile) {
     return (
-      <main className="profile-page">
-        <section className="profile-state-card">
-          <h1>Unable to load profile</h1>
+      <AppShell
+        activePage="profile"
+        eyebrow="MY ACCOUNT"
+        title="Student Profile"
+        description="View your information and update permitted contact fields."
+      >
+        <section className="profile-shell-state">
+          <div className="profile-shell-state-card">
+            <h2>Unable to load profile</h2>
 
-          <p>
-            {errorMessage ||
-              "Your student profile could not be found."}
-          </p>
+            <p>
+              {errorMessage ||
+                "Your student profile could not be found."}
+            </p>
 
-          <button
-            type="button"
-            onClick={() =>
-              window.location.reload()
-            }
-          >
-            Try again
-          </button>
-        </section>
-      </main>
-    );
-  }
-
-  return (
-    <main className="profile-page">
-      <header className="profile-header">
-        <div>
-          <span className="profile-logo">HMS</span>
-
-          <div>
-            <strong>
-              Hostel Management System
-            </strong>
-
-            <small>Student Portal</small>
-          </div>
-        </div>
-
-        <nav>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() =>
-              window.location.assign("/student")
-            }
-          >
-            Dashboard
-          </button>
-
-          <button
-            type="button"
-            className="danger-button"
-            onClick={handleLogout}
-          >
-            Sign out
-          </button>
-        </nav>
-      </header>
-
-      <section className="profile-content">
-        <div className="profile-title-row">
-          <div>
-            <p>MY ACCOUNT</p>
-            <h1>Student Profile</h1>
-
-            <span>
-              View your information and update
-              permitted contact fields.
-            </span>
-          </div>
-
-          {!isEditing && (
             <button
               type="button"
-              className="profile-edit-button"
+              className="primary-button"
+              onClick={() => window.location.reload()}
+            >
+              Try again
+            </button>
+          </div>
+        </section>
+      </AppShell>
+    );
+  }
+    return (
+      <AppShell
+        activePage="profile"
+        eyebrow="MY ACCOUNT"
+        title="Student Profile"
+        description="View your information and update permitted contact fields."
+        actions={
+          !isEditing ? (
+            <button
+              type="button"
+              className="primary-button"
               onClick={() => {
                 setSuccessMessage("");
                 setIsEditing(true);
@@ -188,27 +164,30 @@ function StudentProfilePage() {
             >
               Edit profile
             </button>
+          ) : null
+        }
+      >
+      <div className="profile-page">
+        <section className="profile-content">
+          {successMessage && (
+            <div
+              className="message success"
+              role="status"
+            >
+              {successMessage}
+            </div>
           )}
-        </div>
-
-        {successMessage && (
-          <div
-            className="message success"
-            role="status"
-          >
-            {successMessage}
-          </div>
-        )}
 
         <section className="profile-summary-card">
           <div className="profile-avatar">
-            {profile.profilePhotoUrl ? (
+            {profile.profilePhotoUrl && !photoLoadFailed ? (
               <img
                 key={profile.profilePhotoUrl}
                 src={`${profile.profilePhotoUrl}?v=${encodeURIComponent(
                   profile.updatedAt ?? Date.now()
                 )}`}
                 alt="Student profile"
+                onError={() => setPhotoLoadFailed(true)}
               />
             ) : (
               <span>
@@ -343,9 +322,10 @@ function StudentProfilePage() {
           </section>
         </div>
         )}
-      </section>
-    </main>
-  );
+    </section>
+  </div>
+</AppShell>
+);
 }
 
 export default StudentProfilePage;
