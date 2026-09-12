@@ -1758,3 +1758,25 @@ button:disabled {
     padding: 1.5rem;
   }
 }
+
+.room-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.room-title-actions button {
+  width: auto;
+  min-width: 145px;
+}
+
+@media (max-width: 780px) {
+  .room-title-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .room-title-actions button {
+    width: 100%;
+  }
+}

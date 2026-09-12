@@ -84,6 +84,22 @@ async function sendRoomRequest(path, options = {}) {
   return data;
 }
 
+export function getActiveBlocks() {
+  return sendRoomRequest("/api/admin/blocks", {
+    method: "GET"
+  });
+}
+
+export function createHostelBlock(block) {
+  return sendRoomRequest("/api/admin/blocks", {
+    method: "POST",
+    body: JSON.stringify({
+      blockCode: block.blockCode.trim(),
+      blockName: block.blockName.trim()
+    })
+  });
+}
+
 export function getRooms() {
   return sendRoomRequest("/api/admin/rooms", {
     method: "GET"

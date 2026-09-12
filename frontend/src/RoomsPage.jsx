@@ -5,6 +5,7 @@ import {
 } from "react";
 
 import RoomForm from "./RoomForm.jsx";
+import HostelBlockForm from "./HostelBlockForm.jsx";
 
 import {
   deleteRoom,
@@ -89,6 +90,13 @@ function RoomsPage() {
     setErrorMessage("");
   }
 
+  function openBlockForm() {
+    setSelectedRoom(null);
+    setPanelMode("block");
+    setSuccessMessage("");
+    setErrorMessage("");
+  }
+
   function openEditForm(room) {
     setSelectedRoom(room);
     setPanelMode("edit");
@@ -125,6 +133,16 @@ function RoomsPage() {
       top: 0,
       behavior: "smooth"
     });
+  }
+
+  function handleBlockSaved(createdBlock, message) {
+  closePanel();
+  setSuccessMessage(message);
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
   }
 
   async function confirmDelete() {
@@ -225,13 +243,23 @@ function RoomsPage() {
             </span>
           </div>
 
-          <button
-            type="button"
-            className="primary-button"
-            onClick={openCreateForm}
-          >
-            + Create room
-          </button>
+          <div className="room-title-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={openBlockForm}
+            >
+              + Add block
+            </button>
+
+            <button
+              type="button"
+              className="primary-button"
+              onClick={openCreateForm}
+            >
+              + Create room
+            </button>
+          </div>
         </div>
 
         {successMessage && (
@@ -244,6 +272,13 @@ function RoomsPage() {
           <div className="message error" role="alert">
             {errorMessage}
           </div>
+        )}
+
+        {panelMode === "block" && (
+          <HostelBlockForm
+            onCancel={closePanel}
+            onSaved={handleBlockSaved}
+          />
         )}
 
         {panelMode === "create" && (
