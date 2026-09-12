@@ -7,6 +7,7 @@ import hostelBackground from
 import AdminUsersPage from
   "./AdminUsersPage.jsx";
 import RoomsPage from "./RoomsPage.jsx";
+import AllocationsPage from "./AllocationsPage.jsx";
 
 const landingPageRoles = {
   "/student": "STUDENT",
@@ -298,6 +299,13 @@ function App() {
     "/admin/rooms"
   ) {
     return <RoomsPage />;
+  }
+
+  if (
+    window.location.pathname ===
+    "/admin/allocations"
+  ) {
+    return <AllocationsPage />;
   }
 
   const requiredRole =
