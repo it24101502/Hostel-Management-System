@@ -233,6 +233,21 @@ public class StudentProfilesController : ControllerBase
         }
     }
 
+    [HttpGet]
+    [RequireRole(
+        "ADMIN",
+        "WARDEN",
+        "HOSTEL_MASTER")]
+    public async Task<
+        ActionResult<IReadOnlyList<StudentProfileResponse>>>
+        GetProfiles()
+    {
+        IReadOnlyList<StudentProfileResponse> profiles =
+            await _profileService.GetAllActiveAsync();
+
+        return Ok(profiles);
+    }
+
     // Staff retrieves a profile using its ID.
     [HttpGet("{studentProfileId:long}")]
     [RequireRole(

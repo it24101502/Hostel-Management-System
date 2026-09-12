@@ -239,5 +239,13 @@ public class RoomAllocationServiceTests
 
             return Task.FromResult(OccupancyReport);
         }
+
+        public Task<bool> ReleaseAsync(
+            ulong studentProfileId,
+            ulong administratorUserId)
+        {
+            return Task.FromResult(false);
+        }
+
     }
 }

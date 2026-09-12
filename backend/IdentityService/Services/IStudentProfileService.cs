@@ -24,4 +24,7 @@ public interface IStudentProfileService
     Task<StudentProfileResponse?> UpdateOwnPhotoAsync(
         ulong userId,
         string profilePhotoUrl);
+
+    Task<IReadOnlyList<StudentProfileResponse>>
+    GetAllActiveAsync();
 }

@@ -64,6 +64,15 @@ public class RoomAllocationService : IRoomAllocationService
         return MapResponse(allocation);
     }
 
+    public Task<bool> ReleaseAsync(
+        ulong studentProfileId,
+        ulong administratorUserId)
+    {
+        return _allocationRepository.ReleaseAsync(
+            studentProfileId,
+            administratorUserId);
+    }
+
     public Task<IReadOnlyList<RoomOccupancyResponse>>
         GetOccupancyReportAsync(
             ulong? blockId,

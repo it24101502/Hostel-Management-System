@@ -18,6 +18,10 @@ public interface IRoomAllocationService
         TransferStudentRequest request,
         ulong administratorUserId);
 
+    Task<bool> ReleaseAsync(
+        ulong studentProfileId,
+        ulong administratorUserId);
+
     Task<IReadOnlyList<RoomOccupancyResponse>>
         GetOccupancyReportAsync(
             ulong? blockId,
