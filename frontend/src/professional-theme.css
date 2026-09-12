@@ -58,6 +58,12 @@ button[type="submit"]:hover:not(:disabled) {
   background: #ffffff;
 }
 
+.secondary-button:hover:not(:disabled) {
+  color: #ffffff;
+  background: #195fbd;
+  border-color: #195fbd;
+}
+
 .danger-button {
   color: #d92d20;
   border: 1px solid rgba(239, 68, 68, 0.25);
