@@ -6,6 +6,8 @@ public class StudentProfile
 
     public ulong UserId { get; set; }
 
+    public string Username { get; set; } = string.Empty;
+
     public string Email { get; set; } = string.Empty;
 
     public string RegistrationNumber { get; set; } = string.Empty;

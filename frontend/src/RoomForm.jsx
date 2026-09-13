@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   createRoom,
+  getActiveBlocks,
   RoomApiError,
   updateRoom
 } from "./roomApi.js";
@@ -27,6 +28,62 @@ function RoomForm({ room, onCancel, onSaved }) {
     useState("");
   const [isSubmitting, setIsSubmitting] =
     useState(false);
+  const [blocks, setBlocks] = useState([]);
+  const [isLoadingBlocks, setIsLoadingBlocks] =
+    useState(true);
+  const [blockLoadMessage, setBlockLoadMessage] =
+    useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadBlocks() {
+      try {
+        const activeBlocks = await getActiveBlocks();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setBlocks(activeBlocks);
+
+        setValues((current) => {
+          if (
+            current.blockId ||
+            activeBlocks.length === 0
+          ) {
+            return current;
+          }
+
+          return {
+            ...current,
+            blockId:
+              activeBlocks[0].blockId.toString()
+          };
+        });
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setBlockLoadMessage(
+          error instanceof RoomApiError
+            ? error.message
+            : "Unable to load active hostel blocks."
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoadingBlocks(false);
+        }
+      }
+    }
+
+    loadBlocks();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function validate() {
     const validationErrors = {};
@@ -163,21 +220,47 @@ function RoomForm({ room, onCancel, onSaved }) {
       >
         <div className="admin-form-grid">
           <div className="form-group">
-            <label htmlFor="roomBlockId">Block ID</label>
-            <input
+            <label htmlFor="roomBlockId">
+              Hostel block
+            </label>
+
+            <select
               id="roomBlockId"
               name="blockId"
-              type="number"
-              min="1"
-              step="1"
               value={values.blockId}
               onChange={updateValue}
+              disabled={
+                isLoadingBlocks || blocks.length === 0
+              }
               aria-invalid={Boolean(errors.blockId)}
-              placeholder="Example: 1"
-            />
+            >
+              <option value="">
+                {isLoadingBlocks
+                  ? "Loading active blocks..."
+                  : blocks.length === 0
+                    ? "No active blocks available"
+                    : "Select a hostel block"}
+              </option>
+
+              {blocks.map((block) => (
+                <option
+                  key={block.blockId}
+                  value={block.blockId}
+                >
+                  {block.blockCode} — {block.blockName}
+                </option>
+              ))}
+            </select>
+
             {errors.blockId && (
               <p className="field-error">
                 {errors.blockId}
+              </p>
+            )}
+
+            {blockLoadMessage && (
+              <p className="field-error" role="alert">
+                {blockLoadMessage}
               </p>
             )}
           </div>
@@ -267,7 +350,11 @@ function RoomForm({ room, onCancel, onSaved }) {
           <button
             type="submit"
             className="primary-button"
-            disabled={isSubmitting}
+            disabled={
+              isSubmitting ||
+              isLoadingBlocks ||
+              blocks.length === 0
+            }
           >
             {isSubmitting
               ? "Saving..."

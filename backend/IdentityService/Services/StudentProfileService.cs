@@ -23,6 +23,17 @@ public class StudentProfileService
         _uniquenessService = uniquenessService;
     }
 
+    public async Task<IReadOnlyList<StudentProfileResponse>>
+        GetAllActiveAsync()
+    {
+        IReadOnlyList<StudentProfile> profiles =
+            await _profileRepository.GetAllActiveAsync();
+
+        return profiles
+            .Select(MapResponse)
+            .ToList();
+    }
+
     public async Task<StudentProfileResponse?> GetByIdAsync(
         ulong studentProfileId)
     {
@@ -169,6 +180,8 @@ public class StudentProfileService
                 profile.StudentProfileId,
 
             UserId = profile.UserId,
+
+            Username = profile.Username,
 
             Email = profile.Email,
 
