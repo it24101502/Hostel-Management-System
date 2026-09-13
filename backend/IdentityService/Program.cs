@@ -8,6 +8,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using IdentityService.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,10 @@ builder.Services.Configure<LockoutOptions>(
 builder.Services.Configure<JwtOptions>(
     builder.Configuration.GetSection(
         JwtOptions.SectionName));
+
+builder.Services.Configure<KafkaOptions>(
+    builder.Configuration.GetSection(
+        KafkaOptions.SectionName));
 
 builder.Services.Configure<
     OverdueFeeJobOptions>(
@@ -176,6 +181,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IFeeStatusReportService,
     FeeStatusReportService>();
+
+builder.Services.AddSingleton<
+    IEventPublisher,
+    KafkaEventPublisher>();
 
 var app = builder.Build();
 

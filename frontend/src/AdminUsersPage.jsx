@@ -15,12 +15,6 @@ import {
   getAdminUsers
 } from "./adminUserApi.js";
 
-import { getActiveStudentProfiles } from
-  "./studentProfileApi.js";
-
-import { releaseStudentAllocation } from
-  "./allocationApi.js";
-
 function formatDate(value) {
   if (!value) {
     return "Not provided";
@@ -289,22 +283,6 @@ function AdminUsersPage() {
     setErrorMessage("");
 
     try {
-      const studentProfiles =
-        await getActiveStudentProfiles();
-
-      const studentProfile =
-        studentProfiles.find(
-          (profile) =>
-            Number(profile.userId) ===
-            Number(userToDeactivate.userId)
-        );
-
-      if (studentProfile) {
-        await releaseStudentAllocation(
-          studentProfile.studentProfileId
-        );
-      }
-
       await deactivateAdminUser(
         userToDeactivate.userId
       );
@@ -664,8 +642,8 @@ function AdminUsersPage() {
               will no longer be able to sign in.
               {userToDeactivate.roleName === "STUDENT" && (
                 <>
-                  {" "}Any active room allocation will also
-                  be released.
+                  {" "}Any active room allocation will be
+                  released automatically.
                 </>
               )}
             </p>

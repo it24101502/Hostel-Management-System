@@ -3,6 +3,8 @@ using IdentityService.DTOs;
 using IdentityService.Exceptions;
 using IdentityService.Services;
 using Microsoft.AspNetCore.Mvc;
+using IdentityService.Events;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace IdentityService.Controllers;
 
@@ -12,11 +14,17 @@ namespace IdentityService.Controllers;
 public class AdminUsersController : ControllerBase
 {
     private readonly IAdminUserService _adminUserService;
+    private readonly IStudentProfileService _profileService;
+    private readonly IEventPublisher _eventPublisher;
 
     public AdminUsersController(
-        IAdminUserService adminUserService)
+        IAdminUserService adminUserService,
+        IStudentProfileService profileService,
+        IEventPublisher eventPublisher)
     {
         _adminUserService = adminUserService;
+        _profileService = profileService;
+        _eventPublisher = eventPublisher;
     }
 
     // CREATE: POST /api/admin/users
@@ -121,11 +129,43 @@ public class AdminUsersController : ControllerBase
     // DEACTIVATE: PATCH /api/admin/users/1/deactivate
     [HttpPatch("{userId:long}/deactivate")]
     public async Task<IActionResult> DeactivateUser(
-        ulong userId)
+        ulong userId,
+        CancellationToken cancellationToken)
     {
+        if (!TryGetAuthenticatedUserId(
+                out ulong administratorUserId))
+        {
+            return Unauthorized(new ErrorResponse
+            {
+                Message =
+                    "The authenticated Administrator ID is missing or invalid."
+            });
+        }
+
+        UserResponse? existingUser =
+            await _adminUserService.GetByIdAsync(userId);
+
+        if (existingUser is null)
+        {
+            return NotFound(new ErrorResponse
+            {
+                Message = "User account was not found."
+            });
+        }
+
+        StudentProfileResponse? studentProfile = null;
+
+        if (string.Equals(
+                existingUser.RoleName,
+                "STUDENT",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            studentProfile =
+                await _profileService.GetOwnAsync(userId);
+        }
+
         bool deactivated =
-            await _adminUserService.DeactivateAsync(
-                userId);
+            await _adminUserService.DeactivateAsync(userId);
 
         if (!deactivated)
         {
@@ -135,9 +175,37 @@ public class AdminUsersController : ControllerBase
             });
         }
 
+        if (studentProfile is not null)
+        {
+            var eventMessage =
+                new StudentDeactivatedEvent(
+                    Guid.NewGuid(),
+                    userId,
+                    studentProfile.StudentProfileId,
+                    administratorUserId,
+                    DateTimeOffset.UtcNow);
+
+            await _eventPublisher
+                .PublishStudentDeactivatedAsync(
+                    eventMessage,
+                    cancellationToken);
+        }
+
         return Ok(new
         {
-            message = "User account deactivated successfully."
+            message =
+                "User account deactivated successfully."
         });
+    }
+    private bool TryGetAuthenticatedUserId(
+        out ulong userId)
+    {
+        string? userIdValue =
+            User.FindFirst(
+                JwtRegisteredClaimNames.Sub)?.Value;
+
+        return ulong.TryParse(
+            userIdValue,
+            out userId);
     }
 }
