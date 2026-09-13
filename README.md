@@ -96,3 +96,16 @@ Full JIRA backlog: 16+ stories, acceptance criteria, priority, estimate, owner a
 ## AI Usage Disclosure
 
 Per the assignment brief, direct use of AI to generate or complete project code is prohibited. AI tools were used only for research and planning support, with disclosure.
+
+## Sprint 2 DevOps CI CD
+
+This branch was created to prepare and validate the continuous integration workflow for Sprint 2.
+
+### Purpose
+
+- Add CI support for the Sprint-2-QA-Testing branch.
+- Run automated checks for Sprint 2 feature branches and pull requests.
+- Align the GitHub Actions MySQL version with the Docker Compose environment.
+- Validate backend builds, tests, database migrations, frontend builds, and Docker configuration before integration.
+
+This branch is based on main and contains the initial Sprint 2 DevOps CI configuration changes.
