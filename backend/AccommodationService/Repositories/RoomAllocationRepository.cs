@@ -282,6 +282,57 @@ public class RoomAllocationRepository : IRoomAllocationRepository
                 "The transferred allocation could not be loaded.");
     }
 
+    public async Task<bool> ReleaseAsync(
+        ulong studentProfileId,
+        ulong administratorUserId)
+    {
+        await using var connection =
+            new MySqlConnection(_connectionString);
+
+        await connection.OpenAsync();
+
+        await using var transaction =
+            await connection.BeginTransactionAsync();
+
+        try
+        {
+            AllocationState? allocation =
+                await GetAllocationForUpdateAsync(
+                    connection,
+                    transaction,
+                    studentProfileId);
+
+            if (allocation is null)
+            {
+                await transaction.CommitAsync();
+                return false;
+            }
+
+            await InsertAuditAsync(
+                connection,
+                transaction,
+                allocation.AllocationId,
+                administratorUserId,
+                studentProfileId,
+                "RELEASE",
+                allocation.RoomId,
+                null);
+
+            await DeleteAllocationAsync(
+                connection,
+                transaction,
+                allocation.AllocationId);
+
+            await transaction.CommitAsync();
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
     public async Task<IReadOnlyList<RoomOccupancyResponse>>
         GetOccupancyReportAsync(
             ulong? blockId,
@@ -535,6 +586,29 @@ public class RoomAllocationRepository : IRoomAllocationRepository
         await command.ExecuteNonQueryAsync();
     }
 
+    private static async Task DeleteAllocationAsync(
+        MySqlConnection connection,
+        MySqlTransaction transaction,
+        ulong allocationId)
+    {
+        const string query = """
+            DELETE FROM student_room_allocations
+            WHERE allocation_id = @allocationId;
+            """;
+
+        await using var command =
+            new MySqlCommand(
+                query,
+                connection,
+                transaction);
+
+        command.Parameters.AddWithValue(
+            "@allocationId",
+            allocationId);
+
+        await command.ExecuteNonQueryAsync();
+    }
+
     private static async Task InsertAuditAsync(
         MySqlConnection connection,
         MySqlTransaction transaction,
@@ -543,7 +617,7 @@ public class RoomAllocationRepository : IRoomAllocationRepository
         ulong studentProfileId,
         string action,
         ulong? fromRoomId,
-        ulong toRoomId)
+        ulong? toRoomId)
     {
         const string query = """
             INSERT INTO student_room_allocation_audit_logs
@@ -582,8 +656,9 @@ public class RoomAllocationRepository : IRoomAllocationRepository
         command.Parameters.AddWithValue(
             "@fromRoomId",
             (object?)fromRoomId ?? DBNull.Value);
-        command.Parameters.AddWithValue("@toRoomId", toRoomId);
-
+        command.Parameters.AddWithValue(
+            "@toRoomId",
+            (object?)toRoomId ?? DBNull.Value);
         await command.ExecuteNonQueryAsync();
     }
 

@@ -23,6 +23,7 @@ services:
       - ./database/accommodation/migrations/003_create_student_room_allocations.sql:/docker-entrypoint-initdb.d/103_create_accommodation_allocations.sql:ro
       - ./database/accommodation/migrations/004_create_room_audit_logs.sql:/docker-entrypoint-initdb.d/104_create_accommodation_audit_logs.sql:ro
       - ./database/accommodation/migrations/005_create_allocation_audit_logs.sql:/docker-entrypoint-initdb.d/105_create_allocation_audit_logs.sql:ro
+      - ./database/accommodation/migrations/006_support_allocation_release.sql:/docker-entrypoint-initdb.d/106_support_allocation_release.sql:ro
     healthcheck:
       test:
         [
@@ -49,6 +50,8 @@ services:
       OverdueFeeJob__Enabled: "true"
     ports:
       - "8080:8080"
+    volumes:
+      - hostel-profile-photos:/app/wwwroot/uploads/profile-photos
     depends_on:
       mysql:
         condition: service_healthy
@@ -89,3 +92,4 @@ services:
 
 volumes:
   hostel-mysql-data:
+  hostel-profile-photos:

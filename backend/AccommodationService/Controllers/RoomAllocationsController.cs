@@ -173,4 +173,22 @@ public class RoomAllocationsController : ControllerBase
             Message = exception.Message
         };
     }
+
+    [HttpDelete("student/{studentProfileId:long}")]
+    public async Task<IActionResult> ReleaseStudent(
+        ulong studentProfileId)
+    {
+        if (!TryGetAuthenticatedUserId(
+                out ulong administratorUserId))
+        {
+            return Unauthorized(CreateUserIdError());
+        }
+
+        await _allocationService.ReleaseAsync(
+            studentProfileId,
+            administratorUserId);
+
+        // Idempotent: no allocation is also a successful result.
+        return NoContent();
+    }
 }
