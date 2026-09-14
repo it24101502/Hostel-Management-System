@@ -1584,6 +1584,38 @@ button:disabled {
   text-align: center;
 }
 
+/* Room-management page */
+
+.room-form-help {
+  margin: 1rem 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.room-table {
+  min-width: 900px;
+}
+
+.room-block-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.room-block-cell small {
+  color: #64748b;
+}
+
+.capacity-badge {
+  display: inline-flex;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  color: #1856a4;
+  background: #e9f2ff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .admin-warning-icon {
   width: 58px;
   height: 58px;
@@ -1724,5 +1756,27 @@ button:disabled {
 
   .admin-confirm-dialog {
     padding: 1.5rem;
+  }
+}
+
+.room-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.room-title-actions button {
+  width: auto;
+  min-width: 145px;
+}
+
+@media (max-width: 780px) {
+  .room-title-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .room-title-actions button {
+    width: 100%;
   }
 }

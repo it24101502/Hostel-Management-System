@@ -186,6 +186,13 @@ public class GuardianContactAuthorizationTests
     private sealed class FakeProfileService
         : IStudentProfileService
     {
+         public Task<IReadOnlyList<StudentProfileResponse>>
+            GetAllActiveAsync()
+        {
+            return Task.FromResult<
+                IReadOnlyList<StudentProfileResponse>>(
+                    Array.Empty<StudentProfileResponse>());
+        }
         public StudentProfileResponse? OwnProfile { get; init; }
 
         public Task<StudentProfileResponse?> GetOwnAsync(

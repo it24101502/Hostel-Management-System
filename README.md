@@ -96,3 +96,14 @@ Full JIRA backlog: 16+ stories, acceptance criteria, priority, estimate, owner a
 ## AI Usage Disclosure
 
 Per the assignment brief, direct use of AI to generate or complete project code is prohibited. AI tools were used only for research and planning support, with disclosure.
+
+## Sprint 2 DevOps QA Integration
+
+This branch contains the DevOps CI updates prepared for the Sprint 2 QA environment.
+
+### Purpose
+
+- Run CI when code is pushed to the Sprint-2-QA-Testing branch.
+- Run CI for pull requests targeting the Sprint-2-QA-Testing branch.
+- Use MySQL 8.4 in CI to match the Docker Compose environment.
+- Validate Sprint 2 changes before they are merged into the deploy branch.
