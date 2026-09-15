@@ -104,6 +104,47 @@ export function createAdminUser(user) {
   );
 }
 
+export function createStudentProfile(
+  userId,
+  profile
+) {
+  return sendAdminRequest(
+    "/api/student-profiles",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        userId: Number(userId),
+        email: profile.email.trim(),
+        registrationNumber:
+          profile.registrationNumber.trim(),
+        dateOfBirth:
+          profile.dateOfBirth || null,
+        gender:
+          profile.gender.trim() || null,
+        addressLine1:
+          profile.addressLine1.trim() || null,
+        addressLine2:
+          profile.addressLine2.trim() || null,
+        city:
+          profile.city.trim() || null,
+        district:
+          profile.district.trim() || null,
+        postalCode:
+          profile.postalCode.trim() || null,
+        programmeName:
+          profile.programmeName.trim() || null,
+        facultyName:
+          profile.facultyName.trim() || null,
+        academicYear:
+          profile.academicYear
+            ? Number(profile.academicYear)
+            : null,
+        profilePhotoUrl: null
+      })
+    }
+  );
+}
+
 export function updateAdminUser(
   userId,
   user
