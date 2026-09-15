@@ -75,6 +75,17 @@ function RoleLandingPage({ requiredRole }) {
               >
                 Manage rooms
               </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  window.location.assign(
+                    "/admin/allocations"
+                  )
+                }
+              >
+                Manage allocations
+              </button>
             </>
           )}
 

@@ -241,6 +241,13 @@ public class StudentProfileValidationTests
     private sealed class FakeStudentProfileRepository
         : IStudentProfileRepository
     {
+        public Task<IReadOnlyList<StudentProfile>>
+            GetAllActiveAsync()
+        {
+            return Task.FromResult<
+                IReadOnlyList<StudentProfile>>(
+                Array.Empty<StudentProfile>());
+        }
         public List<StudentProfile> Profiles { get; } = [];
 
         public bool CreateCalled { get; private set; }

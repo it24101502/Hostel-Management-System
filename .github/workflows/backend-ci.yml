@@ -214,13 +214,14 @@ jobs:
                   'hostel_blocks',
                   'hostel_rooms',
                   'student_room_allocations',
-                  'room_audit_logs'
+                  'room_audit_logs',
+                  'student_room_allocation_audit_logs'
                 );
             ")
 
-          echo "Expected 4 accommodation tables; found $TABLE_COUNT."
+          echo "Expected 5 accommodation tables; found $TABLE_COUNT."
 
-          if [ "$TABLE_COUNT" -ne 4 ]; then
+          if [ "$TABLE_COUNT" -ne 5 ]; then
             echo "Accommodation database tables currently available:"
 
             mysql \

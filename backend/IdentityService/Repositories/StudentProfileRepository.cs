@@ -45,6 +45,60 @@ public class StudentProfileRepository
         return Convert.ToInt32(result) > 0;
     }
 
+    public async Task<IReadOnlyList<StudentProfile>>
+        GetAllActiveAsync()
+    {
+        const string query = """
+            SELECT
+                sp.student_profile_id,
+                sp.user_id,
+                u.username,
+                u.email,
+                sp.registration_number,
+                sp.date_of_birth,
+                sp.gender,
+                sp.address_line_1,
+                sp.address_line_2,
+                sp.city,
+                sp.district,
+                sp.postal_code,
+                sp.programme_name,
+                sp.faculty_name,
+                sp.academic_year,
+                sp.profile_photo_url,
+                sp.created_at,
+                sp.updated_at
+            FROM student_profiles AS sp
+            INNER JOIN users AS u
+                ON u.user_id = sp.user_id
+            INNER JOIN roles AS r
+                ON r.role_id = u.role_id
+            WHERE u.is_active = TRUE
+            AND r.role_name = 'STUDENT'
+            ORDER BY sp.registration_number;
+            """;
+
+        var profiles = new List<StudentProfile>();
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+
+        await connection.OpenAsync();
+
+        await using var command =
+            new MySqlCommand(query, connection);
+
+        await using var reader =
+            await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            profiles.Add(MapProfile(reader));
+        }
+
+        return profiles;
+    }
+
     public async Task<StudentProfile?> GetByUserIdAsync(
         ulong userId)
     {
@@ -52,6 +106,7 @@ public class StudentProfileRepository
             SELECT
                 sp.student_profile_id,
                 sp.user_id,
+                u.username,
                 u.email,
                 sp.registration_number,
                 sp.date_of_birth,
@@ -231,6 +286,7 @@ public class StudentProfileRepository
             SELECT
                 sp.student_profile_id,
                 sp.user_id,
+                u.username,
                 u.email,
                 sp.registration_number,
                 sp.date_of_birth,
@@ -631,6 +687,8 @@ public class StudentProfileRepository
                 reader.GetUInt64("student_profile_id"),
 
             UserId = reader.GetUInt64("user_id"),
+
+            Username = reader.GetString("username"),
 
             Email = reader.GetString("email"),
 
