@@ -6,6 +6,8 @@ import hostelBackground from
   "./assets/hostel-night-login-background.png";
 import AdminUsersPage from
   "./AdminUsersPage.jsx";
+import RoomsPage from "./RoomsPage.jsx";
+import AllocationsPage from "./AllocationsPage.jsx";
 
 const landingPageRoles = {
   "/student": "STUDENT",
@@ -290,6 +292,20 @@ function App() {
     "/admin/users"
   ) {
     return <AdminUsersPage />;
+  }
+
+  if (
+    window.location.pathname ===
+    "/admin/rooms"
+  ) {
+    return <RoomsPage />;
+  }
+
+  if (
+    window.location.pathname ===
+    "/admin/allocations"
+  ) {
+    return <AllocationsPage />;
   }
 
   const requiredRole =
