@@ -35,6 +35,58 @@ services:
       retries: 20
       start_period: 30s
 
+  kafka:
+    image: apache/kafka:4.1.0
+    container_name: hostel-kafka
+    hostname: kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_LISTENERS: "PLAINTEXT://:19092,CONTROLLER://:29093,PLAINTEXT_HOST://:9092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:19092,PLAINTEXT_HOST://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_NUM_PARTITIONS: "1"
+    volumes:
+      - hostel-kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  kafka-init:
+    image: apache/kafka:4.1.0
+    container_name: hostel-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -c
+      - >
+        /opt/kafka/bin/kafka-topics.sh
+        --bootstrap-server kafka:19092
+        --create
+        --if-not-exists
+        --topic student-deactivated
+        --partitions 1
+        --replication-factor 1
+
   identity-api:
     build:
       context: .
@@ -48,6 +100,8 @@ services:
       Jwt__Key: ${JWT_KEY}
       ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Management_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
       OverdueFeeJob__Enabled: "true"
+      Kafka__BootstrapServers: "kafka:19092"
+      Kafka__StudentDeactivatedTopic: "student-deactivated"
     ports:
       - "8080:8080"
     volumes:
@@ -55,6 +109,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
 
   accommodation-api:
     build:
@@ -68,11 +124,16 @@ services:
       ASPNETCORE_URLS: http://+:8080
       Jwt__Key: ${JWT_KEY}
       ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Accommodation_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
+      Kafka__BootstrapServers: "kafka:19092"
+      Kafka__StudentDeactivatedTopic: "student-deactivated"
+      Kafka__ConsumerGroupId: "accommodation-service"
     ports:
       - "8081:8080"
     depends_on:
       mysql:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
 
   frontend:
     build:
@@ -93,3 +154,4 @@ services:
 volumes:
   hostel-mysql-data:
   hostel-profile-photos:
+  hostel-kafka-data:

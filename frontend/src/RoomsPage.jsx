@@ -1,3 +1,5 @@
+import AppShell from "./AppShell.jsx";
+
 import {
   useEffect,
   useMemo,
@@ -191,7 +193,32 @@ function RoomsPage() {
   }
 
   return (
-    <main className="admin-users-page">
+    <AppShell
+      activePage="rooms"
+      eyebrow="ACCOMMODATION"
+      title="Hostel rooms"
+      description="Manage hostel blocks, rooms and bed capacity."
+      actions={
+        <>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={openBlockForm}
+          >
+            + Add block
+          </button>
+
+          <button
+            type="button"
+            className="primary-button"
+            onClick={openCreateForm}
+          >
+            + Create room
+          </button>
+        </>
+      }
+    >
+      <div className="admin-users-page">
       <header className="admin-header">
         <div className="admin-brand">
           <span>HMS</span>
@@ -459,7 +486,8 @@ function RoomsPage() {
           </section>
         </div>
       )}
-    </main>
+      </div>
+    </AppShell>
   );
 }
 
