@@ -113,3 +113,14 @@ export function getOccupancyReport(filters = {}) {
     { method: "GET" }
   );
 }
+
+export function releaseStudentAllocation(
+  studentProfileId
+) {
+  return sendRequest(
+    `/api/admin/allocations/student/${studentProfileId}`,
+    {
+      method: "DELETE"
+    }
+  );
+}

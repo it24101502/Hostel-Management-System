@@ -7,6 +7,7 @@ using AccommodationService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using AccommodationService.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,10 @@ builder.Services.AddControllers();
 builder.Services.Configure<JwtOptions>(
     builder.Configuration.GetSection(
         JwtOptions.SectionName));
+
+builder.Services.Configure<KafkaOptions>(
+    builder.Configuration.GetSection(
+        KafkaOptions.SectionName));
 
 builder.Services.AddCors(options =>
 {
@@ -85,6 +90,7 @@ builder.Services.AddScoped<IRoomAllocationRepository,RoomAllocationRepository>()
 builder.Services.AddScoped<IRoomAllocationService,RoomAllocationService>();
 builder.Services.AddScoped<IHostelBlockRepository,HostelBlockRepository>();
 builder.Services.AddScoped<IHostelBlockService,HostelBlockService>();
+builder.Services.AddHostedService<StudentDeactivatedConsumer>();
 
 var app = builder.Build();
 

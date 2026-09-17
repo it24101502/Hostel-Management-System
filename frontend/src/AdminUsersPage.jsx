@@ -1,3 +1,5 @@
+import AppShell from "./AppShell.jsx";
+
 import {
   useEffect,
   useMemo,
@@ -327,7 +329,22 @@ function AdminUsersPage() {
   }
 
   return (
-    <main className="admin-users-page">
+    <AppShell
+      activePage="users"
+      eyebrow="IDENTITY MANAGEMENT"
+      title="User accounts"
+      description="Create, view, update and deactivate system user accounts."
+      actions={
+        <button
+          type="button"
+          className="primary-button"
+          onClick={openCreateForm}
+        >
+          + Create user
+        </button>
+      }
+    >
+      <div className="admin-users-page">
       <header className="admin-header">
         <div className="admin-brand">
           <span>HMS</span>
@@ -623,6 +640,12 @@ function AdminUsersPage() {
                 {userToDeactivate.username}
               </strong>{" "}
               will no longer be able to sign in.
+              {userToDeactivate.roleName === "STUDENT" && (
+                <>
+                  {" "}Any active room allocation will be
+                  released automatically.
+                </>
+              )}
             </p>
 
             <div className="admin-dialog-actions">
@@ -651,7 +674,8 @@ function AdminUsersPage() {
           </section>
         </div>
       )}
-    </main>
+      </div>
+    </AppShell>
   );
 }
 

@@ -1,109 +1,115 @@
-# Hostel Management System (HMS)
+# Sprint 2 QA Testing — Hostel Management System (HMS)
 
-**SE3022 – Case Study Project** | Year 3, Semester 1, 2026
+**Branch:** `Sprint-2-QA-Testing`
+**Module:** SE3022 — Case Study Project (Year 3, Semester 1, 2026)
+**QA Owner:** IT24101502 — Suwasthikka S
+**Sprint Focus:** Room Management, Allocation/Transfer, UI, Performance, Coverage & Dynamic Reports
 
-A microservice-based web platform that connects students, wardens and administrators through one reliable workflow for authentication, room allocation, leave & movement, complaints, fees, and notices.
+---
 
-## Team
+## 1. Purpose of This Branch
 
-| Student ID | Name | Primary Module |
-| --- | --- | --- |
-| IT24101502 | Suwasthikka S | Daily operations (complaints / schedules) |
-| IT24100245 | Peiris M P V P | Leave & movement |
-| IT24102190 | De Silva D S P S N | Rooms & allocation |
-| IT24101844 | Premarathna P A I B | Users & fees |
+This branch contains the Sprint 2 QA verification work for the Accommodation module of the Hostel Management System — room CRUD, student allocation/transfer, live occupancy reporting, and the supporting automated tests, performance tests, and UI tests that back Sprint 2's deliverables.
 
-## The Problem
+## 2. Executive Summary
 
-Manual hostel processes create avoidable risk: leave permission is hard to track, wardens can't see movements in real time, room/fee/complaint records are fragmented, and timetables and notices are easy to miss. One missing record can affect student safety.
+Sprint 2 QA covered Room Management and Allocation/Transfer functionality, including CRUD operations and role restrictions, Selenium UI testing, Apache JMeter performance testing, automated unit/integration test verification with code coverage, audit logging, CI/CD pipeline validation, and dynamic occupancy-report validation.
 
-## Proposed Solution
+The Sprint 2 test specification defined **57 test cases**:
 
-One platform connecting five core areas:
-
-1. **Student & access** — profiles, roles and secure login
-2. **Rooms** — room availability and allocation
-3. **Leave & movement** — requests, approval, departure and return
-4. **Daily operations** — schedules, complaints, fees and notices
-5. **Reports** — live occupancy, leave, fee and complaint reports
-
-## Roles & Scope
-
-| Role | Capabilities |
+| Category | Cases |
 | --- | --- |
-| Student | Request leave, view room & fees, submit complaints, see schedules/notices |
-| Warden / Master | Approve leave, record movements, manage schedules, monitor complaints |
-| Administrator | Manage users, rooms, fees and notices; generate reports |
+| Room CRUD | 13 |
+| Allocation/Transfer | 14 |
+| UI / Selenium | 10 |
+| Performance / JMeter | 4 |
+| Coverage & Automation | 7 |
+| Dynamic Reports | 6 |
+| Kafka (deferred) | 5 |
 
-**In first release:** Authentication, Rooms, Leave, Movement, Timetables, Complaints, Fees, Notices, Reports
-**Explicitly out of scope:** Biometric hardware, GPS tracking, native mobile apps, direct banking integration
+All executable categories were tested with no defects identified. The Kafka category (5 cases) was recorded as **BLOCKED / DEFERRED** rather than failed, since Kafka integration was not implemented in Sprint 2.
 
-## Tech Stack
+## 3. Test Environment
 
-- **Frontend:** React.js
-- **Backend:** ASP.NET + ADO.NET (microservices)
-- **Database:** MySQL
-- **Infrastructure:** Docker, Azure
-- **Source control / CI-CD:** GitHub, GitHub Actions (functional from Sprint 1)
-- **Testing:** Unit & integration tests, Selenium (E2E), JMeter (load)
-
-## Architecture
-
-The system is built as independently deployable microservices (one per module — Auth, Rooms, Leave & Movement, Complaints, Fees, Notices) so that failure in one service does not cause a full-system outage (NFR-04).
-
-## Non-Functional Highlights
-
-- Requests complete within ≤ 3 seconds under expected load (NFR-01)
-- Role-based access, salted password hashes, HTTPS/TLS everywhere (NFR-02)
-- All state-changing operations recorded in an auditable activity log (NFR-03)
-- 99% uptime target during the academic term (NFR-05)
-- Server-side validation on all form input (NFR-09)
-
-## Repository Branches
-
-| Branch | Purpose |
+| Component | Configuration |
 | --- | --- |
-| `main` | Stable, release-ready code |
-| `deploy` | Deployment configuration and pipeline for staging/production |
-| `Sprint-1-QA-Testing` | QA verification for Sprint 1 deliverables |
-| `feature/HMS-1-...` | Feature branch — Secure login & role-based access |
-| `feature/HMS-2-...` | Feature branch — Register & maintain student profiles |
+| Accommodation API | `http://localhost:8081` |
+| Identity Service (Auth) | `http://localhost:8080` (ADMIN Bearer token required) |
+| Frontend | `http://localhost:5173` |
+| API Tooling | Postman |
+| UI Automation | Selenium |
+| Performance | Apache JMeter |
+| Automated Tests | xUnit / `dotnet test` |
+| Coverage | Coverlet collector (Cobertura/HTML report) |
+| CI/CD | GitHub Actions — Backend CI pipeline |
+| Audit Verification | Database / admin endpoint spot-checks |
 
-## Sprint Plan
+## 4. Scope Covered
 
-| Sprint | Theme |
-| --- | --- |
-| 1 | Foundation — Identity & Users |
-| 2 | Room Management |
-| 3 | Leave & Movement |
-| 4 | Complaints, Fees, Notices & Reporting |
+- **Room Management** — create, read, update, delete; validation; duplicate-location prevention; persistence checks
+- **Allocation/Transfer** — allocation with capacity checks, over-capacity rejection, transfer between rooms, release/unallocate, concurrency (last-bed race condition)
+- **Authorization** — unauthenticated (401) and non-admin (403) access restrictions
+- **UI (Selenium)** — forms, navigation, validation, filtering/search, allocation flow, session-expiry handling
+- **Performance (JMeter)** — load testing on room listing, occupancy report, allocation, and transfer endpoints against the ≤ 3s response-time NFR
+- **Automation & Coverage** — xUnit service test suites, coverage generation, audit log verification, CI pipeline validation
+- **Dynamic Reporting** — live occupancy calculations, block/floor filters, status logic, UI/API consistency
 
-## Product Backlog (Must-priority core)
+## 5. Key Results
 
-| ID | User Story | Priority | Owner |
+### 5.1 Room CRUD
+Positive and negative create/read/update/delete scenarios all behaved as expected: `201` on valid creation, `400` on zero capacity or invalid block, `409` on duplicate location, `404` on missing room, `204` on successful delete, `409` on deleting an occupied room, and correct `401`/`403` access restrictions.
+
+### 5.2 Allocation & Transfer
+Allocation and transfer enforced capacity limits correctly (`201`/`409` as appropriate), rejected duplicate allocations and invalid rooms, and the concurrency test for the **last available bed** produced exactly one `201` and one `409` across two simultaneous requests — confirming no double booking.
+
+### 5.3 Performance (JMeter)
+
+| Test | Load | Samples | Threshold |
 | --- | --- | --- | --- |
-| US01 | Secure login and role-based access | Must | Member 1 |
-| US02 | Register and maintain student profiles | Must | Member 1 |
-| US03 | Manage rooms, beds and capacity | Must | Member 2 |
-| US04 | Allocate or transfer students | Must | Member 2 |
-| US05 | Submit a complete leave request | Must | Member 3 |
-| US06 | Approve or reject leave with a reason | Must | Member 3 |
-| US07 | Submit and track complaints | Must | Member 4 |
-| US08 | Publish schedules and notices | Should | Member 4 |
+| List rooms | 20 threads × 5 loops | 100 | Avg + P90 ≤ 3000 ms; all `200` |
+| Live occupancy | 50 threads × 5 loops | 250 | 0% errors; avg ≤ 3000 ms |
+| Allocate | 20 threads × 1 loop | 20 | All `201`; no 5xx; ≤ 3000 ms |
+| Transfer | 10 concurrent threads | 10 | All `200`; avg ≤ 3000 ms |
 
-Full JIRA backlog: 16+ stories, acceptance criteria, priority, estimate, owner and sprint — see project documentation.
+> Raw JMeter Aggregate/Summary metrics (actual averages, P90, throughput) are retained in the QA evidence screenshots rather than restated here.
 
-## AI Usage Disclosure
+### 5.4 Automation, Coverage & CI
+`RoomServiceTests`, `RoomAllocationServiceTests`, and `HostelBlockServiceTests` all passed. Coverage was generated via Coverlet/Cobertura; the exact minimum coverage threshold is still to be formally agreed with the Dev/BA. Room and allocation audit logs (`CREATE`/`UPDATE`/`DELETE`, `ALLOCATE`/`TRANSFER`/`RELEASE`) were verified against the database. The GitHub Actions backend CI pipeline ran migrations, `dotnet test`, frontend build, and Docker image builds successfully.
 
-Per the assignment brief, direct use of AI to generate or complete project code is prohibited. AI tools were used only for research and planning support, with disclosure.
+### 5.5 Dynamic Reports (Live Occupancy)
+Verified with no filters, block filter, block + floor filter, before/after allocation-change consistency, correct `AVAILABLE`/`FULL`/`INACTIVE` status logic, and UI-to-API consistency on the occupancy dashboard.
 
-## Sprint 2 DevOps QA Integration
+### 5.6 UI Testing (Selenium + Manual)
+Covered room/block form validation, allocation and transfer flows, the occupied-room deletion error path, block/floor filtering and room search, and session-expiry redirect behaviour. A manual smoke pass over login and core navigation was also performed.
 
-This branch contains the DevOps CI updates prepared for the Sprint 2 QA environment.
+## 6. Defects
 
-### Purpose
+**No defects were identified during Sprint 2 testing.** All executed test cases passed; no bug logging or defect-severity tracking was required this sprint.
 
-- Run CI when code is pushed to the Sprint-2-QA-Testing branch.
-- Run CI for pull requests targeting the Sprint-2-QA-Testing branch.
-- Use MySQL 8.4 in CI to match the Docker Compose environment.
-- Validate Sprint 2 changes before they are merged into the deploy branch.
+## 7. Deferred Item — Kafka Event Testing
+
+Kafka producer/consumer integration was not implemented in Sprint 2, so the 5 Kafka test cases are recorded as **BLOCKED**, not failed:
+
+| Test | Purpose | Sprint 3+ Action |
+| --- | --- | --- |
+| TC-KAFKA-01 | Producer publishes event | Implement producer; execute test |
+| TC-KAFKA-02 | Consumer processes event | Implement consumer; verify DB side effect |
+| TC-KAFKA-03 | Malformed message handling | Test invalid JSON + recovery/DLQ |
+| TC-KAFKA-04 | Consumer restart/offset resumption | Test restart, offset resume, duplicate prevention |
+
+## 8. Retrospective — Sprint 3 Actions
+
+| Finding | Sprint 3 Improvement | Owner |
+| --- | --- | --- |
+| No agreed coverage threshold | Agree and document minimum coverage % before the Sprint 3 CI gate | QA + Dev/BA |
+| Evidence not consistently tied to test IDs | Name screenshots/results by test-case ID and link to Jira | QA Owner |
+| JMeter results need raw metrics archived | Archive Aggregate/Summary reports (avg, P90, error %, throughput) | QA / Performance Owner |
+| QA findings not yet tracked as backlog items | Create/assign Sprint 3 Jira items for open QA findings | Scrum Team |
+
+## 9. Full Report
+
+The complete QA report — including the detailed test-case tables and the evidence screenshot appendix — is available in `IT24101502_Group_05_Sprint_2_QA_Report.pdf` in this branch.
+
+## 10. Overall Assessment
+
+Sprint 2 QA provides broad coverage of the implemented Room Management and Allocation/Transfer functionality across positive, negative, persistence, authorization, UI, performance, automation, reporting, and CI dimensions. The only deferred area is Kafka, planned for an upcoming sprint. Final sign-off should reference the actual measured JMeter metrics, coverage percentage, CI run, and any Jira items raised from this retrospective.
