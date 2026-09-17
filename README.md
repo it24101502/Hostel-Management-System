@@ -35,7 +35,7 @@ One platform connecting five core areas:
 | Warden / Master | Approve leave, record movements, manage schedules, monitor complaints |
 | Administrator | Manage users, rooms, fees and notices; generate reports |
 
-**In first release:** Authentication, Rooms, Leave, Movement, Timetables, Complaints, Fees, Notices, Reports
+**In previous release:** Authentication, Rooms, Leave, Movement, Timetables, Complaints, Fees, Notices, Reports
 **Explicitly out of scope:** Biometric hardware, GPS tracking, native mobile apps, direct banking integration
 
 ## Tech Stack
@@ -66,8 +66,16 @@ The system is built as independently deployable microservices (one per module �
 | `main` | Stable, release-ready code |
 | `deploy` | Deployment configuration and pipeline for staging/production |
 | `Sprint-1-QA-Testing` | QA verification for Sprint 1 deliverables |
+| `Sprint-2-QA-Testing` | QA verification for Sprint 2 deliverables |
+| `Sprint-3-QA-Testing` | QA verification for Sprint 3 deliverables (leave & movement, Selenium E2E, JMeter load testing) |
 | `feature/HMS-1-...` | Feature branch — Secure login & role-based access |
 | `feature/HMS-2-...` | Feature branch — Register & maintain student profiles |
+| `feature/HMS-3-...` | Feature branch — Manage rooms, beds and capacity profiles |
+| `feature/HMS-4-...` | Feature branch — Allocate or transfer students profiles |
+| `feature/HMS-5-...` | Feature branch — Submit a complete leave request |
+| `feature/HMS-6-...` | Feature branch — Approve or reject leave with a reason |
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full branching, commit and pull-request workflow.
 
 ## Sprint Plan
 
@@ -96,3 +104,15 @@ Full JIRA backlog: 16+ stories, acceptance criteria, priority, estimate, owner a
 ## AI Usage Disclosure
 
 Per the assignment brief, direct use of AI to generate or complete project code is prohibited. AI tools were used only for research and planning support, with disclosure.
+
+## Sprint 3 DevOps QA Integration
+
+This branch contains the DevOps CI updates prepared for the Sprint 3 QA environment (Leave & Movement module).
+
+### Purpose
+
+- Run CI when code is pushed to the `Sprint-3-QA-Testing` branch, and for pull requests targeting it.
+- Cover the leave-request lifecycle (submit → approve/reject → departure → return) with unit and integration tests.
+- Run the Selenium end-to-end suite for the full leave journey against the built frontend and backend.
+- Run the JMeter load test against the leave-submission endpoint and confirm the ≤ 3 second response-time target (NFR-01).
+- Validate Sprint 3 changes before they are merged into the `deploy` branch.
