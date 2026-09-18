@@ -1,0 +1,20 @@
+services:
+  identity-api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+    ports:
+      - "8090:8080"
+
+  accommodation-api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+    ports:
+      - "8091:8080"
+
+  frontend:
+    build:
+      args:
+        VITE_API_BASE_URL: http://localhost:8090
+        VITE_ACCOMMODATION_API_BASE_URL: http://localhost:8091
+    ports:
+      - "5174:80"
