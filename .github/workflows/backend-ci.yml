@@ -280,7 +280,7 @@ jobs:
             exit 1
           fi
 
-       - name: Insert fee-report sample data (identity DB)
+      - name: Insert fee-report sample data (identity DB)
         run: |
           mysql \
             --host=127.0.0.1 \
