@@ -1,3 +1,5 @@
+USE Hostel_Management_System;
+
 INSERT INTO student_profiles
 (
     user_id,
