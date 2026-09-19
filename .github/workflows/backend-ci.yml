@@ -49,6 +49,12 @@ jobs:
     needs: test
     environment: staging   # or production
 
+    # NOTE: the "options" field for a service container cannot use the
+    # secrets/env expression context (${{ secrets.X }}) — GitHub Actions
+    # rejects it with "Unrecognized named-value: 'secrets'". The password
+    # is still available *inside* the mysql container as a normal shell
+    # environment variable (set below via services.mysql.env), so the
+    # health-check just references it as $MYSQL_ROOT_PASSWORD instead.
     services:
       mysql:
         image: mysql:8.4
@@ -58,10 +64,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping
-          -h 127.0.0.1
-          -u root
-          -p${{ secrets.MYSQL_ROOT_PASSWORD }}"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
@@ -81,108 +84,31 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up .NET 10
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "10.0.x"
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+
       - name: Install MySQL client
         run: |
           sudo apt-get update
           sudo apt-get install -y mysql-client
 
-      # Identity service migrations
+      # Identity service migrations.
+      # No --database flag here: 001_create_auth_schema.sql creates
+      # Hostel_Management_System itself, so the database does not exist
+      # yet when this step connects.
       - name: Run identity service migrations
         run: |
           for migration in database/migrations/*.sql; do
             echo "Running $migration"
-            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" --database=Hostel_Management_System < "$migration"
+            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
           done
 
-      # Accommodation service migrations
+      # Accommodation service migrations.
+      # Same reasoning: 001_create_accommodation_database.sql creates
+      # Hostel_Accommodation_System itself.
       - name: Run accommodation service migrations
         run: |
           for migration in database/accommodation/migrations/*.sql; do
             echo "Running $migration"
-            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" --database=Hostel_Accommodation_System < "$migration"
-          done
-
-      - name: Run audit-log migration (identity DB)
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            --database=Hostel_Management_System \
-            < database/migrations/002_create_auth_audit_logs.sql
-
-      - name: Run student-profile and fee migration (identity DB)
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            --database=Hostel_Management_System \
-            < database/migrations/003_create_student_profile_and_fee_schema.sql
-
-      - name: Run fee-status migration (identity DB)
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            --database=Hostel_Management_System \
-            < database/migrations/004_update_fee_invoice_status_values.sql
-
-      - name: Run fee-reminder migration (identity DB)
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            --database=Hostel_Management_System \
-            < database/migrations/005_create_fee_reminder_notifications.sql
-
-      - name: Run hostel-block migration (identity DB)
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            --database=Hostel_Management_System \
-            < database/migrations/006_add_hostel_blocks.sql
-
-      - name: Run student-profile backfill migration (identity DB)
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            --database=Hostel_Management_System \
-            < database/migrations/008_backfill_missing_student_profiles.sql
-
-      - name: Run accommodation database migrations
-        run: |
-          for migration in database/accommodation/migrations/*.sql; do
-            echo "Running $migration"
-
-            mysql \
-              --host=127.0.0.1 \
-              --port=3306 \
-              --user=root \
-              --password="$MYSQL_ROOT_PASSWORD" \
-              < "$migration"
+            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
           done
 
       - name: Verify expected identity database tables
@@ -433,22 +359,18 @@ jobs:
 
           test "$REMINDER_DEFAULT" = "PENDING"
 
-      - name: Restore dependencies
-        run: dotnet restore backend/HostelManagement.sln
+  package:
+    runs-on: ubuntu-latest
+    needs: migrate
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Build backend
-        run: >
-          dotnet build
-          backend/HostelManagement.sln
-          --configuration Release
-          --no-restore
-
-      - name: Run tests
-        run: >
-          dotnet test
-          backend/HostelManagement.sln
-          --configuration Release
-          --no-build
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend dependencies
         working-directory: frontend
