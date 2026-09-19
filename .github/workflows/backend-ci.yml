@@ -64,7 +64,7 @@ jobs:
           --health-cmd="mysqladmin ping
           -h 127.0.0.1
           -u root
-          -pTestRootPassword123!"
+          -p${{ secrets.MYSQL_ROOT_PASSWORD }}"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
@@ -78,7 +78,7 @@ jobs:
         Port=3306;
         Database=Hostel_Management_System;
         User ID=root;
-        Password=TestRootPassword123!;
+        Password=${{ secrets.MYSQL_ROOT_PASSWORD }};
 
       Jwt__Issuer: HostelManagement.IdentityService
       Jwt__Audience: HostelManagement.Client
@@ -104,63 +104,83 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mysql-client
 
-      - name: Run migration
+      - name: Run identity service migrations
         run: |
           for migration in database/migrations/*.sql; do
             echo "Running $migration"
-            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
+            mysql \
+              --host=127.0.0.1 \
+              --port=3306 \
+              --user=root \
+              --password="$MYSQL_ROOT_PASSWORD" \
+              --database=Hostel_Management_System \
+              < "$migration"
           done
+
+      - name: Run accommodation service migrations
+        run: |
           for migration in database/accommodation/migrations/*.sql; do
             echo "Running $migration"
-            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
+            mysql \
+              --host=127.0.0.1 \
+              --port=3306 \
+              --user=root \
+              --password="$MYSQL_ROOT_PASSWORD" \
+              --database=Hostel_Accommodation_System \
+              < "$migration"
           done
 
-      - name: Run audit-log migration
+      - name: Run audit-log migration (identity DB)
         run: |
           mysql \
             --host=127.0.0.1 \
             --port=3306 \
             --user=root \
             --password="$MYSQL_ROOT_PASSWORD" \
+            --database=Hostel_Management_System \
             < database/migrations/002_create_auth_audit_logs.sql
 
-      - name: Run student-profile and fee migration
+      - name: Run student-profile and fee migration (identity DB)
         run: |
           mysql \
             --host=127.0.0.1 \
             --port=3306 \
             --user=root \
             --password="$MYSQL_ROOT_PASSWORD" \
+            --database=Hostel_Management_System \
             < database/migrations/003_create_student_profile_and_fee_schema.sql
 
-      - name: Run fee-status migration
+      - name: Run fee-status migration (identity DB)
         run: |
           mysql \
             --host=127.0.0.1 \
             --port=3306 \
             --user=root \
             --password="$MYSQL_ROOT_PASSWORD" \
+            --database=Hostel_Management_System \
             < database/migrations/004_update_fee_invoice_status_values.sql
 
-      - name: Run fee-reminder migration
+      - name: Run fee-reminder migration (identity DB)
         run: |
           mysql \
             --host=127.0.0.1 \
             --port=3306 \
             --user=root \
             --password="$MYSQL_ROOT_PASSWORD" \
+            --database=Hostel_Management_System \
             < database/migrations/005_create_fee_reminder_notifications.sql
 
-      - name: Run hostel-block migration
+      - name: Run hostel-block migration (identity DB)
         run: |
           mysql \
             --host=127.0.0.1 \
             --port=3306 \
             --user=root \
             --password="$MYSQL_ROOT_PASSWORD" \
+            --database=Hostel_Management_System \
             < database/migrations/006_add_hostel_blocks.sql
 
-      - name: Run student-profile backfill migration
+      - name: Run student-profile backfill migration (identity DB)
         run: |
           mysql \
             --host=127.0.0.1 \
@@ -278,13 +298,14 @@ jobs:
             exit 1
           fi
 
-      - name: Insert fee-report sample data
+       - name: Insert fee-report sample data (identity DB)
         run: |
           mysql \
             --host=127.0.0.1 \
             --port=3306 \
             --user=root \
             --password="$MYSQL_ROOT_PASSWORD" \
+            --database=Hostel_Management_System \
             < database/tests/fee_status_report_sample_data.sql
 
       - name: Verify accommodation room schema
