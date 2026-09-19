@@ -80,9 +80,6 @@ jobs:
         User ID=root;
         Password=TestRootPassword123!;
 
-      Jwt__Key: >-
-        ThisIsATemporarySecureJwtKeyForGitHubActionsTesting123456789
-
       Jwt__Issuer: HostelManagement.IdentityService
       Jwt__Audience: HostelManagement.Client
       Jwt__ExpiryMinutes: 15
