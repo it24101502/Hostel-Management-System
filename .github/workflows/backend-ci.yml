@@ -52,14 +52,11 @@ jobs:
     services:
       mysql:
         image: mysql:8.4
-
         env:
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           MYSQL_ROOT_HOST: "%"
-
         ports:
           - 3306:3306
-
         options: >-
           --health-cmd="mysqladmin ping
           -h 127.0.0.1
@@ -72,62 +69,47 @@ jobs:
     env:
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
       Jwt__Key: ${{ secrets.JWT_KEY }}
-
       ConnectionStrings__DefaultConnection: >-
         Server=127.0.0.1;
         Port=3306;
         Database=Hostel_Management_System;
         User ID=root;
         Password=${{ secrets.MYSQL_ROOT_PASSWORD }};
-
       Jwt__Issuer: HostelManagement.IdentityService
       Jwt__Audience: HostelManagement.Client
       Jwt__ExpiryMinutes: 15
 
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
-
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install MySQL client
         run: |
           sudo apt-get update
           sudo apt-get install -y mysql-client
 
+      # Identity service migrations
       - name: Run identity service migrations
         run: |
           for migration in database/migrations/*.sql; do
             echo "Running $migration"
-            mysql \
-              --host=127.0.0.1 \
-              --port=3306 \
-              --user=root \
-              --password="$MYSQL_ROOT_PASSWORD" \
-              --database=Hostel_Management_System \
-              < "$migration"
+            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" --database=Hostel_Management_System < "$migration"
           done
 
+      # Accommodation service migrations
       - name: Run accommodation service migrations
         run: |
           for migration in database/accommodation/migrations/*.sql; do
             echo "Running $migration"
-            mysql \
-              --host=127.0.0.1 \
-              --port=3306 \
-              --user=root \
-              --password="$MYSQL_ROOT_PASSWORD" \
-              --database=Hostel_Accommodation_System \
-              < "$migration"
+            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" --database=Hostel_Accommodation_System < "$migration"
           done
 
       - name: Run audit-log migration (identity DB)
