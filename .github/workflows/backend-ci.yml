@@ -111,6 +111,16 @@ jobs:
             mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
           done
 
+      # Leave service migrations.
+      # Same reasoning: 001_create_leave_database.sql creates
+      # Hostel_Leave_System itself.
+      - name: Run leave service migrations
+        run: |
+          for migration in database/leave/migrations/*.sql; do
+            echo "Running $migration"
+            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
+          done
+
       - name: Verify expected identity database tables
         run: |
           TABLE_COUNT=$(mysql \
@@ -398,4 +408,11 @@ jobs:
           docker build
           --file frontend/Dockerfile
           --tag hostel-frontend:ci
+          .
+
+      - name: Build leave service Docker image
+        run: >
+          docker build
+          --file backend/LeaveService/Dockerfile
+          --tag hostel-leave-service:ci
           .

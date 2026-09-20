@@ -135,6 +135,29 @@ services:
       kafka-init:
         condition: service_completed_successfully
 
+  leave-api:
+    build:
+      context: .
+      dockerfile: backend/LeaveService/Dockerfile
+    image: hostel-leave-service:sprint3
+    container_name: hostel-leave-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      Jwt__Key: ${JWT_KEY}
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Leave_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
+      Kafka__BootstrapServers: "kafka:19092"
+      Kafka__StudentDeactivatedTopic: "student-deactivated"
+      Kafka__ConsumerGroupId: "leave-service"
+    ports:
+      - "8082:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+
   frontend:
     build:
       context: .
