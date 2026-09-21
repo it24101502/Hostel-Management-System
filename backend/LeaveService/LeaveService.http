@@ -1,6 +1,40 @@
-@LeaveService_HostAddress = http://localhost:5297
+# Manual test requests for the Leave API.
+#
+# 1. Sign in through IdentityService (http://localhost:8080/api/auth/login)
+#    as a student, then paste the returned accessToken below.
+# 2. Send the requests with the "Send Request" link above each one
+#    (VS Code REST Client / Visual Studio HTTP editor).
 
-GET {{LeaveService_HostAddress}}/weatherforecast/
-Accept: application/json
+@LeaveService_HostAddress = http://localhost:8082
+@studentToken = paste-student-access-token-here
+@wardenToken = paste-warden-access-token-here
 
-###
+### Submit a leave request (student)
+POST {{LeaveService_HostAddress}}/api/student/leave-requests
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "departureDate": "2026-12-20",
+  "expectedReturnDate": "2026-12-27",
+  "reason": "Family wedding",
+  "companionName": "Nimal Perera",
+  "companionRelationship": "Father",
+  "companionPhone": "0771234567"
+}
+
+### List my leave requests (student)
+GET {{LeaveService_HostAddress}}/api/student/leave-requests
+Authorization: Bearer {{studentToken}}
+
+### View one of my leave requests (student)
+GET {{LeaveService_HostAddress}}/api/student/leave-requests/1
+Authorization: Bearer {{studentToken}}
+
+### Unread leave notifications (warden or hostel master)
+GET {{LeaveService_HostAddress}}/api/staff/leave-notifications?unreadOnly=true
+Authorization: Bearer {{wardenToken}}
+
+### Mark a notification as read (warden or hostel master)
+PUT {{LeaveService_HostAddress}}/api/staff/leave-notifications/1/read
+Authorization: Bearer {{wardenToken}}

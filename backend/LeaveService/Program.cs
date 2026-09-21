@@ -1,39 +1,118 @@
+using System.Security.Claims;
+using System.Text;
+using LeaveService.Events;
+using LeaveService.Middleware;
+using LeaveService.Options;
+using LeaveService.Repositories;
+using LeaveService.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddControllers();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Leave API", Version = "v1" });
+});
+
+builder.Services.Configure<JwtOptions>(
+    builder.Configuration.GetSection(
+        JwtOptions.SectionName));
+
+builder.Services.Configure<KafkaOptions>(
+    builder.Configuration.GetSection(
+        KafkaOptions.SectionName));
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        "ReactFrontend",
+        policy =>
+        {
+            policy
+                .WithOrigins(
+                    "http://localhost:5173",
+                    "http://localhost:5174",
+                    "https://zealous-desert-0c41b8500.6.azurestaticapps.net")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
+
+var jwtOptions = builder.Configuration
+    .GetSection(JwtOptions.SectionName)
+    .Get<JwtOptions>()
+    ?? throw new InvalidOperationException(
+        "JWT configuration is missing.");
+
+if (string.IsNullOrWhiteSpace(jwtOptions.Key) ||
+    jwtOptions.Key.Length < 32)
+{
+    throw new InvalidOperationException(
+        "A secure JWT signing key is required.");
+}
+
+builder.Services
+    .AddAuthentication(
+        JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(
+                            jwtOptions.Key)),
+
+                ValidateIssuer = true,
+                ValidIssuer = jwtOptions.Issuer,
+
+                ValidateAudience = true,
+                ValidAudience = jwtOptions.Audience,
+
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero,
+
+                NameClaimType =
+                    JwtRegisteredClaimNames.UniqueName,
+
+                RoleClaimType = ClaimTypes.Role
+            };
+    });
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddSingleton<ILeaveEventPublisher, KafkaLeaveEventPublisher>();
+
+builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
+builder.Services.AddScoped<ILeaveNotificationRepository, LeaveNotificationRepository>();
+builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
+builder.Services.AddScoped<ILeaveNotificationService, LeaveNotificationService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+app.UseCors("ReactFrontend");
+app.UseAuthentication();
+app.UseMiddleware<RoleAuthorizationMiddleware>();
+app.UseAuthorization();
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
