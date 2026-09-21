@@ -24,6 +24,10 @@ services:
       - ./database/accommodation/migrations/004_create_room_audit_logs.sql:/docker-entrypoint-initdb.d/104_create_accommodation_audit_logs.sql:ro
       - ./database/accommodation/migrations/005_create_allocation_audit_logs.sql:/docker-entrypoint-initdb.d/105_create_allocation_audit_logs.sql:ro
       - ./database/accommodation/migrations/006_support_allocation_release.sql:/docker-entrypoint-initdb.d/106_support_allocation_release.sql:ro
+      - ./database/leave/migrations/001_create_leave_database.sql:/docker-entrypoint-initdb.d/201_create_leave_database.sql:ro
+      - ./database/leave/migrations/002_create_leave_requests.sql:/docker-entrypoint-initdb.d/202_create_leave_requests.sql:ro
+      - ./database/leave/migrations/003_create_leave_audit_logs.sql:/docker-entrypoint-initdb.d/203_create_leave_audit_logs.sql:ro
+      - ./database/leave/migrations/004_create_leave_notifications.sql:/docker-entrypoint-initdb.d/204_create_leave_notifications.sql:ro
     healthcheck:
       test:
         [
@@ -78,14 +82,9 @@ services:
     command:
       - /bin/sh
       - -c
-      - >
-        /opt/kafka/bin/kafka-topics.sh
-        --bootstrap-server kafka:19092
-        --create
-        --if-not-exists
-        --topic student-deactivated
-        --partitions 1
-        --replication-factor 1
+      - |
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic student-deactivated --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-events --partitions 1 --replication-factor 1
 
   identity-api:
     build:
@@ -150,6 +149,7 @@ services:
       Kafka__BootstrapServers: "kafka:19092"
       Kafka__StudentDeactivatedTopic: "student-deactivated"
       Kafka__ConsumerGroupId: "leave-service"
+      Kafka__LeaveEventsTopic: "leave-events"
     ports:
       - "8082:8080"
     depends_on:
@@ -165,6 +165,7 @@ services:
       args:
         VITE_API_BASE_URL: http://localhost:8080
         VITE_ACCOMMODATION_API_BASE_URL: http://localhost:8081
+        VITE_LEAVE_API_BASE_URL: http://localhost:8082
     image: hostel-frontend:sprint1
     container_name: hostel-frontend-web
     restart: unless-stopped
@@ -173,6 +174,7 @@ services:
     depends_on:
       - identity-api
       - accommodation-api
+      - leave-api
 
 volumes:
   hostel-mysql-data:

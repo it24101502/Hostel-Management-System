@@ -216,6 +216,95 @@ jobs:
             exit 1
           fi
 
+      - name: Verify expected leave database tables
+        run: |
+          TABLE_COUNT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT COUNT(*)
+              FROM information_schema.tables
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Leave_System')
+                AND table_name IN
+                (
+                  'leave_requests',
+                  'leave_request_audit_logs',
+                  'leave_notifications'
+                );
+            ")
+
+          echo "Expected 3 leave tables; found $TABLE_COUNT."
+
+          if [ "$TABLE_COUNT" -ne 3 ]; then
+            echo "Leave database tables currently available:"
+
+            mysql \
+              --host=127.0.0.1 \
+              --port=3306 \
+              --user=root \
+              --password="$MYSQL_ROOT_PASSWORD" \
+              --execute="
+                SELECT table_schema, table_name
+                FROM information_schema.tables
+                WHERE LOWER(table_schema) =
+                      LOWER('Hostel_Leave_System')
+                ORDER BY table_name;
+              "
+
+            exit 1
+          fi
+
+      - name: Verify leave request schema
+        run: |
+          LEAVE_CONSTRAINT_RESULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT CONCAT(
+                SUM(constraint_name =
+                    'chk_leave_requests_dates'), ',',
+                SUM(constraint_name =
+                    'chk_leave_requests_status'), ',',
+                SUM(constraint_name =
+                    'chk_leave_requests_required_text')
+              )
+              FROM information_schema.table_constraints
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Leave_System')
+                AND table_name = 'leave_requests';
+            ")
+
+          echo "Required leave constraints: $LEAVE_CONSTRAINT_RESULT"
+          test "$LEAVE_CONSTRAINT_RESULT" = "1,1,1"
+
+          LEAVE_STATUS_DEFAULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT column_default
+              FROM information_schema.columns
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Leave_System')
+                AND table_name = 'leave_requests'
+                AND column_name = 'status';
+            ")
+
+          echo "Leave request status default: $LEAVE_STATUS_DEFAULT"
+          test "$LEAVE_STATUS_DEFAULT" = "PENDING"
+
       - name: Insert fee-report sample data (identity DB)
         run: |
           mysql \
