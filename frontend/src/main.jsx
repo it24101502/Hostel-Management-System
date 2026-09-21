@@ -5,6 +5,7 @@ import "./styles.css";
 import "./styles.css";
 import "./professional-theme.css";
 import "./app-shell.css";
+import "./leave.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

@@ -39,6 +39,12 @@ const navigationByRole = {
       label: "My profile",
       href: "/student/profile",
       icon: "profile"
+    },
+    {
+      key: "leave",
+      label: "Leave requests",
+      href: "/student/leave",
+      icon: "leave"
     }
   ],
   WARDEN: [
@@ -103,6 +109,14 @@ function NavIcon({ name }) {
       <>
         <circle cx="12" cy="8" r="4" />
         <path d="M4 21a8 8 0 0 1 16 0" />
+      </>
+    ),
+    leave: (
+      <>
+        <rect x="3" y="4" width="18" height="17" rx="2" />
+        <path d="M16 2v4" />
+        <path d="M8 2v4" />
+        <path d="M3 10h18" />
       </>
     )
   };

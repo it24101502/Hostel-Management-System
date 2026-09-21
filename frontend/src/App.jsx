@@ -2,6 +2,7 @@ import { useState } from "react";
 import RoleLandingPage from "./RoleLandingPage.jsx";
 import StudentProfilePage from
   "./StudentProfilePage.jsx";
+import StudentLeavePage from "./StudentLeavePage.jsx";
 import hostelBackground from
   "./assets/hostel-night-login-background.png";
 import AdminUsersPage from
@@ -285,6 +286,13 @@ function App() {
     "/student/profile"
   ) {
     return <StudentProfilePage />;
+  }
+
+  if (
+    window.location.pathname ===
+    "/student/leave"
+  ) {
+    return <StudentLeavePage />;
   }
 
   if (
