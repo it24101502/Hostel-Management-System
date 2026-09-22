@@ -84,7 +84,9 @@ services:
       - -c
       - |
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic student-deactivated --partitions 1 --replication-factor 1
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-events --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-requested --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-approved --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-overdue --partitions 1 --replication-factor 1
 
   identity-api:
     build:
@@ -150,6 +152,9 @@ services:
       Kafka__StudentDeactivatedTopic: "student-deactivated"
       Kafka__ConsumerGroupId: "leave-service"
       Kafka__LeaveEventsTopic: "leave-events"
+      Kafka__LeaveRequestedTopic: "leave-requested"
+      Kafka__LeaveApprovedTopic: "leave-approved"
+      Kafka__LeaveOverdueTopic: "leave-overdue"
     ports:
       - "8082:8080"
     depends_on:

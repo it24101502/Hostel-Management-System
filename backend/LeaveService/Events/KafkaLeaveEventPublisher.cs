@@ -50,7 +50,7 @@ public sealed class KafkaLeaveEventPublisher
             // queue. The delivery handler runs later, when Kafka
             // confirms or rejects the message.
             _producer.Produce(
-                _options.LeaveEventsTopic,
+                _options.LeaveRequestedTopic,
                 new Message<string, string>
                 {
                     // Keying by request keeps every event of one
