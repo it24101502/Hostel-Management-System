@@ -1,109 +1,53 @@
-# Hostel Management System (HMS)
+# HMS-6 — Approve or reject leave with a reason
 
-**SE3022 – Case Study Project** | Year 3, Semester 1, 2026
+**Branch:** `feature/HMS-6-Approve-or-reject-leave-with-a-reason`
+**Epic:** HMS-6 | **Priority:** Must | **Module:** Leave & Movement | **Owner:** Member 3
+**Related FRs:** FR-19–FR-21
+**Sprint:** Sprint 3 — Leave & Movement
 
-A microservice-based web platform that connects students, wardens and administrators through one reliable workflow for authentication, room allocation, leave & movement, complaints, fees, and notices.
+## Description
 
-## Team
+As a **Warden**, I want to approve or reject a student's leave request with a recorded reason, and record actual departure and return, so that leave decisions and student movements are traceable and student safety is maintained.
 
-| Student ID | Name | Primary Module |
-| --- | --- | --- |
-| IT24101502 | Suwasthikka S | Daily operations (complaints / schedules) |
-| IT24100245 | Peiris M P V P | Leave & movement |
-| IT24102190 | De Silva D S P S N | Rooms & allocation |
-| IT24101844 | Premarathna P A I B | Users & fees |
+## Scope of this branch
 
-## The Problem
+This branch implements the warden-facing decision and movement-tracking flow: approve/reject with a mandatory reason, departure/return recording, overdue-return alerting, and the warden review UI. It builds directly on the `Pending` requests created in HMS-5.
 
-Manual hostel processes create avoidable risk: leave permission is hard to track, wardens can't see movements in real time, room/fee/complaint records are fragmented, and timetables and notices are easy to miss. One missing record can affect student safety.
+## Acceptance Criteria
 
-## Proposed Solution
+- Warden can approve or reject a `Pending` leave request
+- A decision reason is required and stored with the decision
+- Authorized staff can record the actual departure time against an approved request
+- Authorized staff can record the actual return time, which closes the request
+- The system flags and alerts the warden when a student has not returned by the expected return date
 
-One platform connecting five core areas:
+## Definition of Done
 
-1. **Student & access** — profiles, roles and secure login
-2. **Rooms** — room availability and allocation
-3. **Leave & movement** — requests, approval, departure and return
-4. **Daily operations** — schedules, complaints, fees and notices
-5. **Reports** — live occupancy, leave, fee and complaint reports
+- [ ] Approve/reject workflow implemented with mandatory decision-reason capture
+- [ ] Departure/return recording implemented and linked to request status transitions (`Approved → Departed → Closed`)
+- [ ] Overdue-return alert/flagging logic implemented and tested
+- [ ] Unit + integration tests covering approval, rejection, departure/return recording, and overdue flagging pass in CI
+- [ ] All decisions and movement records appear in the audit log
+- [ ] Reviewed, merged, and deployed to the test environment
 
-## Roles & Scope
+## Related sub-tasks (JIRA)
 
-| Role | Capabilities |
-| --- | --- |
-| Student | Request leave, view room & fees, submit complaints, see schedules/notices |
-| Warden / Master | Approve leave, record movements, manage schedules, monitor complaints |
-| Administrator | Manage users, rooms, fees and notices; generate reports |
-
-**In first release:** Authentication, Rooms, Leave, Movement, Timetables, Complaints, Fees, Notices, Reports
-**Explicitly out of scope:** Biometric hardware, GPS tracking, native mobile apps, direct banking integration
-
-## Tech Stack
-
-- **Frontend:** React.js
-- **Backend:** ASP.NET + ADO.NET (microservices)
-- **Database:** MySQL
-- **Infrastructure:** Docker, Azure
-- **Source control / CI-CD:** GitHub, GitHub Actions (functional from Sprint 1)
-- **Testing:** Unit & integration tests, Selenium (E2E), JMeter (load)
-
-## Architecture
-
-The system is built as independently deployable microservices (one per module — Auth, Rooms, Leave & Movement, Complaints, Fees, Notices) so that failure in one service does not cause a full-system outage (NFR-04).
-
-## Non-Functional Highlights
-
-- Requests complete within ≤ 3 seconds under expected load (NFR-01)
-- Role-based access, salted password hashes, HTTPS/TLS everywhere (NFR-02)
-- All state-changing operations recorded in an auditable activity log (NFR-03)
-- 99% uptime target during the academic term (NFR-05)
-- Server-side validation on all form input (NFR-09)
-
-## Repository Branches
-
-| Branch | Purpose |
-| --- | --- |
-| `main` | Stable, release-ready code |
-| `deploy` | Deployment configuration and pipeline for staging/production |
-| `Sprint-1-QA-Testing` | QA verification for Sprint 1 deliverables |
-| `feature/HMS-1-...` | Feature branch — Secure login & role-based access |
-| `feature/HMS-2-...` | Feature branch — Register & maintain student profiles |
-
-## Sprint Plan
-
-| Sprint | Theme |
-| --- | --- |
-| 1 | Foundation — Identity & Users |
-| 2 | Room Management |
-| 3 | Leave & Movement |
-| 4 | Complaints, Fees, Notices & Reporting |
-
-## Product Backlog (Must-priority core)
-
-| ID | User Story | Priority | Owner |
+| ID | Task | Priority | Points |
 | --- | --- | --- | --- |
-| US01 | Secure login and role-based access | Must | Member 1 |
-| US02 | Register and maintain student profiles | Must | Member 1 |
-| US03 | Manage rooms, beds and capacity | Must | Member 2 |
-| US04 | Allocate or transfer students | Must | Member 2 |
-| US05 | Submit a complete leave request | Must | Member 3 |
-| US06 | Approve or reject leave with a reason | Must | Member 3 |
-| US07 | Submit and track complaints | Must | Member 4 |
-| US08 | Publish schedules and notices | Should | Member 4 |
+| HMS-46 | Implement approve/reject API with mandatory decision reason | Highest | 5 |
+| HMS-47 | Implement departure recording API | High | 3 |
+| HMS-48 | Implement return recording API + auto-close | High | 3 |
+| HMS-49 | Implement overdue-return detection & warden alert | High | 5 |
+| HMS-50 | Leave & movement dynamic report | High | 8 |
+| HMS-51 | Build warden review/decision UI | High | 8 |
+| — | Selenium E2E — full leave lifecycle (request → approve → depart → return) | Medium | 8 |
+| — | JMeter load test — leave submission endpoint (≤3s target, NFR-01) | Medium | 5 |
 
-Full JIRA backlog: 16+ stories, acceptance criteria, priority, estimate, owner and sprint — see project documentation.
+## Dependencies
 
-## AI Usage Disclosure
+Depends on **HMS-5** (leave request submission) for `Pending` requests to act on, and on Authentication (HMS-1) for warden role/session context.
 
-Per the assignment brief, direct use of AI to generate or complete project code is prohibited. AI tools were used only for research and planning support, with disclosure.
+## Notes
 
-## Sprint 2 DevOps QA Integration
+Status transition model: `Pending → Approved/Rejected → Departed → Closed`. Departure can only be recorded for an `Approved` request; return recording closes the request automatically.
 
-This branch contains the DevOps CI updates prepared for the Sprint 2 QA environment.
-
-### Purpose
-
-- Run CI when code is pushed to the Sprint-2-QA-Testing branch.
-- Run CI for pull requests targeting the Sprint-2-QA-Testing branch.
-- Use MySQL 8.4 in CI to match the Docker Compose environment.
-- Validate Sprint 2 changes before they are merged into the deploy branch.
