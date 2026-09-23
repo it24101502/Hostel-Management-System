@@ -505,3 +505,19 @@ jobs:
           --file backend/LeaveService/Dockerfile
           --tag hostel-leave-service:ci
           .
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: package
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to Azure VM
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ~/hms
+            git pull
+            docker compose up -d --build
