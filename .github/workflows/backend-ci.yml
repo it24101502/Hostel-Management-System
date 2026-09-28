@@ -9,152 +9,116 @@ on:
       - "release/**"
       - Sprint-1-QA-Testing
       - Sprint-2-QA-Testing
+      - Sprint-3-QA-Testing
       - deploy
 
   pull_request:
     branches:
       - main
-      - Sprint-1-QA-Testing
-      - Sprint-2-QA-Testing
+      - Sprint-3-QA-Testing
       - deploy
 
 jobs:
-  build-test-and-migrate:
+  build:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore dependencies
+        run: dotnet restore backend/HostelManagement.sln
+      - name: Build backend
+        run: dotnet build backend/HostelManagement.sln --configuration Release --no-restore
 
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+      - name: Run tests
+        run: dotnet test backend/HostelManagement.sln --configuration Release --no-build
+
+  migrate:
+    runs-on: ubuntu-latest
+    needs: test
+    environment: staging   # or production
+
+    # NOTE: the "options" field for a service container cannot use the
+    # secrets/env expression context (${{ secrets.X }}) — GitHub Actions
+    # rejects it with "Unrecognized named-value: 'secrets'". The password
+    # is still available *inside* the mysql container as a normal shell
+    # environment variable (set below via services.mysql.env), so the
+    # health-check just references it as $MYSQL_ROOT_PASSWORD instead.
     services:
       mysql:
         image: mysql:8.4
-
         env:
-          MYSQL_ROOT_PASSWORD: TestRootPassword123!
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           MYSQL_ROOT_HOST: "%"
-
         ports:
           - 3306:3306
-
         options: >-
-          --health-cmd="mysqladmin ping
-          -h 127.0.0.1
-          -u root
-          -pTestRootPassword123!"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
 
     env:
-      MYSQL_ROOT_PASSWORD: TestRootPassword123!
-
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      Jwt__Key: ${{ secrets.JWT_KEY }}
       ConnectionStrings__DefaultConnection: >-
         Server=127.0.0.1;
         Port=3306;
         Database=Hostel_Management_System;
         User ID=root;
-        Password=TestRootPassword123!;
-
-      Jwt__Key: >-
-        ThisIsATemporarySecureJwtKeyForGitHubActionsTesting123456789
-
+        Password=${{ secrets.MYSQL_ROOT_PASSWORD }};
       Jwt__Issuer: HostelManagement.IdentityService
       Jwt__Audience: HostelManagement.Client
       Jwt__ExpiryMinutes: 15
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up .NET 10
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/checkout@v4
 
       - name: Install MySQL client
         run: |
           sudo apt-get update
           sudo apt-get install -y mysql-client
 
-      - name: Run authentication schema migration
+      # Identity service migrations.
+      # No --database flag here: 001_create_auth_schema.sql creates
+      # Hostel_Management_System itself, so the database does not exist
+      # yet when this step connects.
+      - name: Run identity service migrations
         run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            < database/migrations/001_create_auth_schema.sql
+          for migration in database/migrations/*.sql; do
+            echo "Running $migration"
+            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
+          done
 
-      - name: Run audit-log migration
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            < database/migrations/002_create_auth_audit_logs.sql
-
-      - name: Run student-profile and fee migration
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            < database/migrations/003_create_student_profile_and_fee_schema.sql
-
-      - name: Run fee-status migration
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            < database/migrations/004_update_fee_invoice_status_values.sql
-
-      - name: Run fee-reminder migration
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            < database/migrations/005_create_fee_reminder_notifications.sql
-
-      - name: Run hostel-block migration
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            < database/migrations/006_add_hostel_blocks.sql
-
-      - name: Run student-profile backfill migration
-        run: |
-          mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=root \
-            --password="$MYSQL_ROOT_PASSWORD" \
-            --database=Hostel_Management_System \
-            < database/migrations/008_backfill_missing_student_profiles.sql
-
-      - name: Run accommodation database migrations
+      # Accommodation service migrations.
+      # Same reasoning: 001_create_accommodation_database.sql creates
+      # Hostel_Accommodation_System itself.
+      - name: Run accommodation service migrations
         run: |
           for migration in database/accommodation/migrations/*.sql; do
             echo "Running $migration"
+            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
+          done
 
-            mysql \
-              --host=127.0.0.1 \
-              --port=3306 \
-              --user=root \
-              --password="$MYSQL_ROOT_PASSWORD" \
-              < "$migration"
+      # Leave service migrations.
+      # Same reasoning: 001_create_leave_database.sql creates
+      # Hostel_Leave_System itself.
+      - name: Run leave service migrations
+        run: |
+          for migration in database/leave/migrations/*.sql; do
+            echo "Running $migration"
+            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
           done
 
       - name: Verify expected identity database tables
@@ -252,13 +216,103 @@ jobs:
             exit 1
           fi
 
-      - name: Insert fee-report sample data
+      - name: Verify expected leave database tables
+        run: |
+          TABLE_COUNT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT COUNT(*)
+              FROM information_schema.tables
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Leave_System')
+                AND table_name IN
+                (
+                  'leave_requests',
+                  'leave_request_audit_logs',
+                  'leave_notifications'
+                );
+            ")
+
+          echo "Expected 3 leave tables; found $TABLE_COUNT."
+
+          if [ "$TABLE_COUNT" -ne 3 ]; then
+            echo "Leave database tables currently available:"
+
+            mysql \
+              --host=127.0.0.1 \
+              --port=3306 \
+              --user=root \
+              --password="$MYSQL_ROOT_PASSWORD" \
+              --execute="
+                SELECT table_schema, table_name
+                FROM information_schema.tables
+                WHERE LOWER(table_schema) =
+                      LOWER('Hostel_Leave_System')
+                ORDER BY table_name;
+              "
+
+            exit 1
+          fi
+
+      - name: Verify leave request schema
+        run: |
+          LEAVE_CONSTRAINT_RESULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT CONCAT(
+                SUM(constraint_name =
+                    'chk_leave_requests_dates'), ',',
+                SUM(constraint_name =
+                    'chk_leave_requests_status'), ',',
+                SUM(constraint_name =
+                    'chk_leave_requests_required_text')
+              )
+              FROM information_schema.table_constraints
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Leave_System')
+                AND table_name = 'leave_requests';
+            ")
+
+          echo "Required leave constraints: $LEAVE_CONSTRAINT_RESULT"
+          test "$LEAVE_CONSTRAINT_RESULT" = "1,1,1"
+
+          LEAVE_STATUS_DEFAULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT column_default
+              FROM information_schema.columns
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Leave_System')
+                AND table_name = 'leave_requests'
+                AND column_name = 'status';
+            ")
+
+          echo "Leave request status default: $LEAVE_STATUS_DEFAULT"
+          test "$LEAVE_STATUS_DEFAULT" = "PENDING"
+
+      - name: Insert fee-report sample data (identity DB)
         run: |
           mysql \
             --host=127.0.0.1 \
             --port=3306 \
             --user=root \
             --password="$MYSQL_ROOT_PASSWORD" \
+            --database=Hostel_Management_System \
             < database/tests/fee_status_report_sample_data.sql
 
       - name: Verify accommodation room schema
@@ -404,22 +458,18 @@ jobs:
 
           test "$REMINDER_DEFAULT" = "PENDING"
 
-      - name: Restore dependencies
-        run: dotnet restore backend/HostelManagement.sln
+  package:
+    runs-on: ubuntu-latest
+    needs: migrate
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Build backend
-        run: >
-          dotnet build
-          backend/HostelManagement.sln
-          --configuration Release
-          --no-restore
-
-      - name: Run tests
-        run: >
-          dotnet test
-          backend/HostelManagement.sln
-          --configuration Release
-          --no-build
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -447,4 +497,11 @@ jobs:
           docker build
           --file frontend/Dockerfile
           --tag hostel-frontend:ci
+          .
+
+      - name: Build leave service Docker image
+        run: >
+          docker build
+          --file backend/LeaveService/Dockerfile
+          --tag hostel-leave-service:ci
           .

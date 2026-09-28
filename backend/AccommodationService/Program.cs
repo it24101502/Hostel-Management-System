@@ -8,10 +8,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using AccommodationService.BackgroundServices;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Accommodation API", Version = "v1" });
+});
 
 builder.Services.Configure<JwtOptions>(
     builder.Configuration.GetSection(
@@ -30,6 +37,7 @@ builder.Services.AddCors(options =>
             policy
                 .WithOrigins(
                     "http://localhost:5173",
+                    "http://localhost:5174",
                     "https://zealous-desert-0c41b8500.6.azurestaticapps.net")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
@@ -93,6 +101,12 @@ builder.Services.AddScoped<IHostelBlockService,HostelBlockService>();
 builder.Services.AddHostedService<StudentDeactivatedConsumer>();
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseCors("ReactFrontend");
 app.UseAuthentication();

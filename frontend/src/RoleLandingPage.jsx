@@ -49,6 +49,14 @@ const modulesByRole = {
         "View your account and update permitted information.",
       href: "/student/profile",
       accent: "indigo"
+    },
+    {
+      number: "02",
+      title: "Leave requests",
+      description:
+        "Submit leave requests and track their approval status.",
+      href: "/student/leave",
+      accent: "cyan"
     }
   ],
   WARDEN: [],

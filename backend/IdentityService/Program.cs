@@ -9,11 +9,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using IdentityService.Events;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Identity API", Version = "v1" });
+});
 
 builder.Services.Configure<LockoutOptions>(
     builder.Configuration.GetSection(
@@ -32,8 +38,6 @@ builder.Services.Configure<
         builder.Configuration.GetSection(
             OverdueFeeJobOptions.SectionName));
 
-builder.Services.AddOpenApi();
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(
@@ -41,8 +45,10 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins("http://localhost:5173",
-                "https://zealous-desert-0c41b8500.6.azurestaticapps.net")
+                .WithOrigins(
+                    "http://localhost:5173",
+                    "http://localhost:5174",
+                    "https://zealous-desert-0c41b8500.6.azurestaticapps.net")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
         });
@@ -188,12 +194,18 @@ builder.Services.AddSingleton<
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Disable HTTPS redirection in Staging
+if (!app.Environment.IsStaging())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 app.UseCors("ReactFrontend");
 app.UseAuthentication();
