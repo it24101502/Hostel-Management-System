@@ -28,6 +28,7 @@ services:
       - ./database/leave/migrations/002_create_leave_requests.sql:/docker-entrypoint-initdb.d/202_create_leave_requests.sql:ro
       - ./database/leave/migrations/003_create_leave_audit_logs.sql:/docker-entrypoint-initdb.d/203_create_leave_audit_logs.sql:ro
       - ./database/leave/migrations/004_create_leave_notifications.sql:/docker-entrypoint-initdb.d/204_create_leave_notifications.sql:ro
+      - ./database/leave/migrations/005_add_leave_decision_and_movement.sql:/docker-entrypoint-initdb.d/205_add_leave_decision_and_movement.sql:ro
     healthcheck:
       test:
         [

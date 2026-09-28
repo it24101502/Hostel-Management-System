@@ -1,55 +1,53 @@
-# HMS-5 — Submit a complete leave request
+# HMS-6 — Approve or reject leave with a reason
 
-**Branch:** `feature/HMS-5-Submit-a-complete-leave-request`
-**Epic:** HMS-5 | **Priority:** Must | **Module:** Leave & Movement | **Owner:** Member 3
-**Related FRs:** FR-15–FR-18, FR-22
+**Branch:** `feature/HMS-6-Approve-or-reject-leave-with-a-reason`
+**Epic:** HMS-6 | **Priority:** Must | **Module:** Leave & Movement | **Owner:** Member 3
+**Related FRs:** FR-19–FR-21
 **Sprint:** Sprint 3 — Leave & Movement
 
 ## Description
 
-As a **Student**, I want to submit a leave request with my departure date, return date, reason and companion/guardian details, and track its status, so that I can obtain permission to go home and know where my request stands.
+As a **Warden**, I want to approve or reject a student's leave request with a recorded reason, and record actual departure and return, so that leave decisions and student movements are traceable and student safety is maintained.
 
 ## Scope of this branch
 
-This branch implements the student-facing leave request submission flow end to end: schema, API, validation, notification on submit, status tracking, and the submission UI.
+This branch implements the warden-facing decision and movement-tracking flow: approve/reject with a mandatory reason, departure/return recording, overdue-return alerting, and the warden review UI. It builds directly on the `Pending` requests created in HMS-5.
 
 ## Acceptance Criteria
 
-- Departure and expected-return dates are required to submit a request
-- A reason must be provided
-- Companion or guardian details are captured when required
-- A request is rejected if the return date is earlier than the departure date
-- A request missing any required field (dates, reason, or companion/guardian info) is rejected
-- A valid request is saved with status `Pending` and the assigned warden is notified
-- The student can view the real-time status of their submitted request(s)
+- Warden can approve or reject a `Pending` leave request
+- A decision reason is required and stored with the decision
+- Authorized staff can record the actual departure time against an approved request
+- Authorized staff can record the actual return time, which closes the request
+- The system flags and alerts the warden when a student has not returned by the expected return date
 
 ## Definition of Done
 
-- [ ] Leave request form and submission API implemented with full server-side validation
-- [ ] `Pending`-status workflow and warden notification implemented
-- [ ] Status tracking view available to the student
-- [ ] Unit + integration tests covering valid submission, missing-field rejection, and invalid-date-range rejection pass in CI
-- [ ] Request submissions recorded in the audit log
-- [ ] Feature demoed and accepted by the product owner
+- [ ] Approve/reject workflow implemented with mandatory decision-reason capture
+- [ ] Departure/return recording implemented and linked to request status transitions (`Approved → Departed → Closed`)
+- [ ] Overdue-return alert/flagging logic implemented and tested
+- [ ] Unit + integration tests covering approval, rejection, departure/return recording, and overdue flagging pass in CI
+- [ ] All decisions and movement records appear in the audit log
+- [ ] Reviewed, merged, and deployed to the test environment
 
 ## Related sub-tasks (JIRA)
 
 | ID | Task | Priority | Points |
 | --- | --- | --- | --- |
-| HMS-39 | Design leave request DB schema (status enum: Pending/Approved/Rejected/Closed) | High | 3 |
-| HMS-40 | Implement leave request submission API | Highest | 5 |
-| HMS-41 | Implement required-field validation (dates, reason, companion/guardian) | Highest | 2 |
-| HMS-42 | Implement date-range validation (return ≥ departure) | High | 2 |
-| HMS-43 | Implement Pending status + warden notification on submit | High | 5 |
-| HMS-44 | Implement student-facing request status tracking | Medium | 3 |
-| HMS-45 | Build leave request submission UI | High | 5 |
-| — | Unit + integration tests — submission, validation, status tracking | Medium | 5 |
+| HMS-46 | Implement approve/reject API with mandatory decision reason | Highest | 5 |
+| HMS-47 | Implement departure recording API | High | 3 |
+| HMS-48 | Implement return recording API + auto-close | High | 3 |
+| HMS-49 | Implement overdue-return detection & warden alert | High | 5 |
+| HMS-50 | Leave & movement dynamic report | High | 8 |
+| HMS-51 | Build warden review/decision UI | High | 8 |
+| — | Selenium E2E — full leave lifecycle (request → approve → depart → return) | Medium | 8 |
+| — | JMeter load test — leave submission endpoint (≤3s target, NFR-01) | Medium | 5 |
 
 ## Dependencies
 
-Depends on Authentication (HMS-1) and Room Management (HMS-3/HMS-4) modules being available, per the sprint plan (leave & movement is core student-facing workflow layered on Auth + Room data).
+Depends on **HMS-5** (leave request submission) for `Pending` requests to act on, and on Authentication (HMS-1) for warden role/session context.
 
 ## Notes
 
-Business rule: a request cannot be approved when required dates, reason, or companion/guardian information is missing (enforced at submission, checked again at approval in HMS-6).
+Status transition model: `Pending → Approved/Rejected → Departed → Closed`. Departure can only be recorded for an `Approved` request; return recording closes the request automatically.
 

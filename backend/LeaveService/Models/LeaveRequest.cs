@@ -22,6 +22,22 @@ public class LeaveRequest
 
     public string Status { get; set; } = string.Empty;
 
+    public ulong? DecidedByUserId { get; set; }
+
+    public string? DecisionReason { get; set; }
+
+    public DateTime? DecidedAt { get; set; }
+
+    public ulong? DepartureRecordedByUserId { get; set; }
+
+    public DateTime? ActualDepartureAt { get; set; }
+
+    public ulong? ReturnRecordedByUserId { get; set; }
+
+    public DateTime? ActualReturnAt { get; set; }
+
+    public DateTime? OverdueAlertedAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }

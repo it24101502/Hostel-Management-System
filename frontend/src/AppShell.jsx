@@ -25,6 +25,12 @@ const navigationByRole = {
       label: "Allocations",
       href: "/admin/allocations",
       icon: "allocations"
+    },
+    {
+      key: "leave",
+      label: "Leave report",
+      href: "/admin/leave",
+      icon: "leave"
     }
   ],
   STUDENT: [
@@ -53,6 +59,12 @@ const navigationByRole = {
       label: "Dashboard",
       href: "/warden",
       icon: "dashboard"
+    },
+    {
+      key: "leave",
+      label: "Leave requests",
+      href: "/warden/leave",
+      icon: "leave"
     }
   ],
   HOSTEL_MASTER: [
@@ -61,6 +73,12 @@ const navigationByRole = {
       label: "Dashboard",
       href: "/hostel-master",
       icon: "dashboard"
+    },
+    {
+      key: "leave",
+      label: "Leave requests",
+      href: "/hostel-master/leave",
+      icon: "leave"
     }
   ]
 };

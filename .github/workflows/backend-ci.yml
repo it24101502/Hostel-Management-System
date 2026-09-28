@@ -307,6 +307,60 @@ jobs:
           echo "Leave request status default: $LEAVE_STATUS_DEFAULT"
           test "$LEAVE_STATUS_DEFAULT" = "PENDING"
 
+      - name: Verify leave decision and movement schema
+        run: |
+          LEAVE_COLUMN_RESULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT COUNT(*)
+              FROM information_schema.columns
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Leave_System')
+                AND table_name = 'leave_requests'
+                AND column_name IN
+                (
+                  'decided_by_user_id',
+                  'decision_reason',
+                  'decided_at',
+                  'departure_recorded_by_user_id',
+                  'actual_departure_at',
+                  'return_recorded_by_user_id',
+                  'actual_return_at',
+                  'overdue_alerted_at'
+                );
+            ")
+
+          echo "Expected 8 decision/movement columns; found $LEAVE_COLUMN_RESULT."
+          test "$LEAVE_COLUMN_RESULT" = "8"
+
+          LEAVE_CHECK_RESULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT CONCAT(
+                SUM(constraint_name =
+                    'chk_leave_requests_decision'), ',',
+                SUM(constraint_name =
+                    'chk_leave_requests_movement')
+              )
+              FROM information_schema.table_constraints
+              WHERE LOWER(table_schema) =
+                    LOWER('Hostel_Leave_System')
+                AND table_name = 'leave_requests';
+            ")
+
+          echo "Required leave status constraints: $LEAVE_CHECK_RESULT"
+          test "$LEAVE_CHECK_RESULT" = "1,1"
+
       - name: Insert fee-report sample data (identity DB)
         run: |
           mysql \

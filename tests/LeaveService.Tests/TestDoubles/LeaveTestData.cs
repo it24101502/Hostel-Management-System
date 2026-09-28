@@ -37,4 +37,28 @@ internal static class LeaveTestData
             new FixedTimeProvider(Now),
             NullLogger<LeaveRequestService>.Instance);
     }
+
+    public static LeaveReviewService CreateReviewService(
+        FakeLeaveRequestRepository repository,
+        FakeLeaveEventPublisher publisher,
+        DateTimeOffset? now = null)
+    {
+        return new LeaveReviewService(
+            repository,
+            publisher,
+            new FixedTimeProvider(now ?? Now),
+            NullLogger<LeaveReviewService>.Instance);
+    }
+
+    public static LeaveOverdueJobService CreateOverdueJobService(
+        FakeLeaveRequestRepository repository,
+        FakeLeaveEventPublisher publisher,
+        DateTimeOffset? now = null)
+    {
+        return new LeaveOverdueJobService(
+            repository,
+            publisher,
+            new FixedTimeProvider(now ?? Now),
+            NullLogger<LeaveOverdueJobService>.Instance);
+    }
 }

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using LeaveService.BackgroundServices;
 using LeaveService.Events;
 using LeaveService.Middleware;
 using LeaveService.Options;
@@ -27,6 +28,10 @@ builder.Services.Configure<JwtOptions>(
 builder.Services.Configure<KafkaOptions>(
     builder.Configuration.GetSection(
         KafkaOptions.SectionName));
+
+builder.Services.Configure<LeaveOverdueJobOptions>(
+    builder.Configuration.GetSection(
+        LeaveOverdueJobOptions.SectionName));
 
 builder.Services.AddCors(options =>
 {
@@ -99,6 +104,9 @@ builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
 builder.Services.AddScoped<ILeaveNotificationRepository, LeaveNotificationRepository>();
 builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
 builder.Services.AddScoped<ILeaveNotificationService, LeaveNotificationService>();
+builder.Services.AddScoped<ILeaveReviewService, LeaveReviewService>();
+builder.Services.AddScoped<ILeaveOverdueJobService, LeaveOverdueJobService>();
+builder.Services.AddHostedService<LeaveOverdueBackgroundService>();
 
 var app = builder.Build();
 

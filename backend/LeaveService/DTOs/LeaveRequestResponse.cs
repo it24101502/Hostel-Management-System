@@ -22,6 +22,18 @@ public class LeaveRequestResponse
 
     public string Status { get; set; } = string.Empty;
 
+    public string? DecisionReason { get; set; }
+
+    public DateTime? DecidedAt { get; set; }
+
+    public DateTime? ActualDepartureAt { get; set; }
+
+    public DateTime? ActualReturnAt { get; set; }
+
+    // True when the student has departed and is past the
+    // expected return date without a recorded return.
+    public bool IsOverdue { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
