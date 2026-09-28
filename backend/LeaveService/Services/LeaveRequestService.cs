@@ -87,9 +87,18 @@ public class LeaveRequestService : ILeaveRequestService
                 notification,
                 utcNow.UtcDateTime);
 
-        await PublishSubmittedEventAsync(created, utcNow);
+        await _eventPublisher.PublishSafelyAsync(
+            new LeaveEvent(
+                Guid.NewGuid(),
+                LeaveEventTypes.RequestSubmitted,
+                created.LeaveRequestId,
+                created.StudentUserId,
+                created.Status,
+                created.StudentUserId,
+                utcNow),
+            _logger);
 
-        return LeaveRequestMapper.ToResponse(created);
+        return LeaveRequestMapper.ToResponse(created, today);
     }
 
     public async Task<IReadOnlyList<LeaveRequestResponse>>
@@ -98,8 +107,11 @@ public class LeaveRequestService : ILeaveRequestService
         var requests =
             await _repository.GetByStudentAsync(studentUserId);
 
+        DateOnly today = GetToday();
+
         return requests
-            .Select(LeaveRequestMapper.ToResponse)
+            .Select(request =>
+                LeaveRequestMapper.ToResponse(request, today))
             .ToList();
     }
 
@@ -118,7 +130,13 @@ public class LeaveRequestService : ILeaveRequestService
             return null;
         }
 
-        return LeaveRequestMapper.ToResponse(request);
+        return LeaveRequestMapper.ToResponse(request, GetToday());
+    }
+
+    private DateOnly GetToday()
+    {
+        return DateOnly.FromDateTime(
+            _timeProvider.GetUtcNow().UtcDateTime);
     }
 
     private static Dictionary<string, List<string>> Validate(
@@ -267,32 +285,5 @@ public class LeaveRequestService : ILeaveRequestService
         return date.ToString(
             "yyyy-MM-dd",
             CultureInfo.InvariantCulture);
-    }
-
-    private async Task PublishSubmittedEventAsync(
-        LeaveRequest request,
-        DateTimeOffset occurredAtUtc)
-    {
-        try
-        {
-            await _eventPublisher.PublishAsync(
-                new LeaveEvent(
-                    Guid.NewGuid(),
-                    LeaveEventTypes.RequestSubmitted,
-                    request.LeaveRequestId,
-                    request.StudentUserId,
-                    request.Status,
-                    request.StudentUserId,
-                    occurredAtUtc));
-        }
-        catch (Exception exception)
-        {
-            // The request is already saved. A messaging failure
-            // must not turn a successful submission into an error.
-            _logger.LogWarning(
-                exception,
-                "Unable to publish the submission event for leave request {LeaveRequestId}.",
-                request.LeaveRequestId);
-        }
     }
 }

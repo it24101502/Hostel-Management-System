@@ -38,3 +38,25 @@ Authorization: Bearer {{wardenToken}}
 ### Mark a notification as read (warden or hostel master)
 PUT {{LeaveService_HostAddress}}/api/staff/leave-notifications/1/read
 Authorization: Bearer {{wardenToken}}
+
+### Leave and movement report (warden, hostel master or admin)
+GET {{LeaveService_HostAddress}}/api/staff/leave-requests/report?status=PENDING
+Authorization: Bearer {{wardenToken}}
+
+### Approve or reject a pending request, with a reason (warden or hostel master)
+PUT {{LeaveService_HostAddress}}/api/staff/leave-requests/1/decision
+Authorization: Bearer {{wardenToken}}
+Content-Type: application/json
+
+{
+  "decision": "APPROVE",
+  "reason": "Guardian confirmed by phone."
+}
+
+### Record the student's departure (warden or hostel master)
+PUT {{LeaveService_HostAddress}}/api/staff/leave-requests/1/departure
+Authorization: Bearer {{wardenToken}}
+
+### Record the student's return (warden or hostel master)
+PUT {{LeaveService_HostAddress}}/api/staff/leave-requests/1/return
+Authorization: Bearer {{wardenToken}}
