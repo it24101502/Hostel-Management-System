@@ -1,53 +1,52 @@
-# HMS-6 — Approve or reject leave with a reason
+# `deploy` Branch — Hostel Management System
 
-**Branch:** `feature/HMS-6-Approve-or-reject-leave-with-a-reason`
-**Epic:** HMS-6 | **Priority:** Must | **Module:** Leave & Movement | **Owner:** Member 3
-**Related FRs:** FR-19–FR-21
-**Sprint:** Sprint 3 — Leave & Movement
+This branch holds deployment configuration and pipeline definitions for the HMS microservices. It is not meant for feature development — merge stable, tested code here from `main` when preparing a release.
 
-## Description
+## Purpose
 
-As a **Warden**, I want to approve or reject a student's leave request with a recorded reason, and record actual departure and return, so that leave decisions and student movements are traceable and student safety is maintained.
+- Docker build/compose definitions for each microservice (Auth, Rooms, Leave & Movement, Complaints, Fees, Notices)
+- Azure deployment configuration
+- GitHub Actions workflows for CI/CD (build, test, deploy)
+- Environment configuration templates (`.env.example`) for staging/production
 
-## Scope of this branch
+## Architecture Notes
 
-This branch implements the warden-facing decision and movement-tracking flow: approve/reject with a mandatory reason, departure/return recording, overdue-return alerting, and the warden review UI. It builds directly on the `Pending` requests created in HMS-5.
+The system follows a microservice architecture per NFR-04: each service is independently deployable, so a failure in one service (e.g., Notices) should not cause a full-system outage. Services communicate over HTTPS/TLS (NFR-02).
 
-## Acceptance Criteria
+| Service | Responsibility |
+| --- | --- |
+| Auth Service | Login, JWT issuance/validation, role-based access, audit logging |
+| User/Fee Service | Student & staff profiles, guardian contacts, fee invoices & payments |
+| Room Service | Room CRUD, allocation, transfer, occupancy status |
+| Leave & Movement Service | Leave requests, approvals, departure/return tracking |
+| Complaint Service | Complaint submission, triage, status tracking |
+| Notice Service | Notices & schedules, block filtering, auto-archive |
 
-- Warden can approve or reject a `Pending` leave request
-- A decision reason is required and stored with the decision
-- Authorized staff can record the actual departure time against an approved request
-- Authorized staff can record the actual return time, which closes the request
-- The system flags and alerts the warden when a student has not returned by the expected return date
+## Deployment Targets
 
-## Definition of Done
+- **Container platform:** Docker
+- **Cloud:** Azure
+- **Database:** MySQL (managed instance or containerized, per environment)
 
-- [ ] Approve/reject workflow implemented with mandatory decision-reason capture
-- [ ] Departure/return recording implemented and linked to request status transitions (`Approved → Departed → Closed`)
-- [ ] Overdue-return alert/flagging logic implemented and tested
-- [ ] Unit + integration tests covering approval, rejection, departure/return recording, and overdue flagging pass in CI
-- [ ] All decisions and movement records appear in the audit log
-- [ ] Reviewed, merged, and deployed to the test environment
+## CI/CD Pipeline (GitHub Actions)
 
-## Related sub-tasks (JIRA)
+The pipeline has been functional since Sprint 1 and runs on every PR and merge:
 
-| ID | Task | Priority | Points |
-| --- | --- | --- | --- |
-| HMS-46 | Implement approve/reject API with mandatory decision reason | Highest | 5 |
-| HMS-47 | Implement departure recording API | High | 3 |
-| HMS-48 | Implement return recording API + auto-close | High | 3 |
-| HMS-49 | Implement overdue-return detection & warden alert | High | 5 |
-| HMS-50 | Leave & movement dynamic report | High | 8 |
-| HMS-51 | Build warden review/decision UI | High | 8 |
-| — | Selenium E2E — full leave lifecycle (request → approve → depart → return) | Medium | 8 |
-| — | JMeter load test — leave submission endpoint (≤3s target, NFR-01) | Medium | 5 |
+1. Restore dependencies / build each service
+2. Run unit and integration tests
+3. Run Selenium end-to-end tests (leave lifecycle, etc.)
+4. Run JMeter load tests against critical endpoints (e.g. leave submission, ≤ 3s target per NFR-01)
+5. Build and push Docker images
+6. Deploy to the target environment (staging on merge to `deploy`, production on tagged release)
 
-## Dependencies
+## Before Deploying
 
-Depends on **HMS-5** (leave request submission) for `Pending` requests to act on, and on Authentication (HMS-1) for warden role/session context.
+- [ ] All Sprint deliverables merged and passing CI on `main`
+- [ ] Security tests passed (auth, RBAC, profile/fee access control)
+- [ ] Environment variables and secrets configured (not committed)
+- [ ] Database migrations verified against a fresh schema
+- [ ] Monitoring/logging endpoints wired up (NFR-10 — logs/metrics for tracing)
 
-## Notes
+## Rollback
 
-Status transition model: `Pending → Approved/Rejected → Departed → Closed`. Departure can only be recorded for an `Approved` request; return recording closes the request automatically.
-
+Each microservice can be rolled back independently by redeploying its previous container image/tag, without affecting the other services.
