@@ -1,98 +1,55 @@
-# Hostel Management System (HMS)
+# HMS-5 — Submit a complete leave request
 
-**SE3022 – Case Study Project** | Year 3, Semester 1, 2026
+**Branch:** `feature/HMS-5-Submit-a-complete-leave-request`
+**Epic:** HMS-5 | **Priority:** Must | **Module:** Leave & Movement | **Owner:** Member 3
+**Related FRs:** FR-15–FR-18, FR-22
+**Sprint:** Sprint 3 — Leave & Movement
 
-A microservice-based web platform that connects students, wardens and administrators through one reliable workflow for authentication, room allocation, leave & movement, complaints, fees, and notices.
+## Description
 
-## Team
+As a **Student**, I want to submit a leave request with my departure date, return date, reason and companion/guardian details, and track its status, so that I can obtain permission to go home and know where my request stands.
 
-| Student ID | Name | Primary Module |
-| --- | --- | --- |
-| IT24101502 | Suwasthikka S | Daily operations (complaints / schedules) |
-| IT24100245 | Peiris M P V P | Leave & movement |
-| IT24102190 | De Silva D S P S N | Rooms & allocation |
-| IT24101844 | Premarathna P A I B | Users & fees |
+## Scope of this branch
 
-## The Problem
+This branch implements the student-facing leave request submission flow end to end: schema, API, validation, notification on submit, status tracking, and the submission UI.
 
-Manual hostel processes create avoidable risk: leave permission is hard to track, wardens can't see movements in real time, room/fee/complaint records are fragmented, and timetables and notices are easy to miss. One missing record can affect student safety.
+## Acceptance Criteria
 
-## Proposed Solution
+- Departure and expected-return dates are required to submit a request
+- A reason must be provided
+- Companion or guardian details are captured when required
+- A request is rejected if the return date is earlier than the departure date
+- A request missing any required field (dates, reason, or companion/guardian info) is rejected
+- A valid request is saved with status `Pending` and the assigned warden is notified
+- The student can view the real-time status of their submitted request(s)
 
-One platform connecting five core areas:
+## Definition of Done
 
-1. **Student & access** — profiles, roles and secure login
-2. **Rooms** — room availability and allocation
-3. **Leave & movement** — requests, approval, departure and return
-4. **Daily operations** — schedules, complaints, fees and notices
-5. **Reports** — live occupancy, leave, fee and complaint reports
+- [ ] Leave request form and submission API implemented with full server-side validation
+- [ ] `Pending`-status workflow and warden notification implemented
+- [ ] Status tracking view available to the student
+- [ ] Unit + integration tests covering valid submission, missing-field rejection, and invalid-date-range rejection pass in CI
+- [ ] Request submissions recorded in the audit log
+- [ ] Feature demoed and accepted by the product owner
 
-## Roles & Scope
+## Related sub-tasks (JIRA)
 
-| Role | Capabilities |
-| --- | --- |
-| Student | Request leave, view room & fees, submit complaints, see schedules/notices |
-| Warden / Master | Approve leave, record movements, manage schedules, monitor complaints |
-| Administrator | Manage users, rooms, fees and notices; generate reports |
-
-**In first release:** Authentication, Rooms, Leave, Movement, Timetables, Complaints, Fees, Notices, Reports
-**Explicitly out of scope:** Biometric hardware, GPS tracking, native mobile apps, direct banking integration
-
-## Tech Stack
-
-- **Frontend:** React.js
-- **Backend:** ASP.NET + ADO.NET (microservices)
-- **Database:** MySQL
-- **Infrastructure:** Docker, Azure
-- **Source control / CI-CD:** GitHub, GitHub Actions (functional from Sprint 1)
-- **Testing:** Unit & integration tests, Selenium (E2E), JMeter (load)
-
-## Architecture
-
-The system is built as independently deployable microservices (one per module — Auth, Rooms, Leave & Movement, Complaints, Fees, Notices) so that failure in one service does not cause a full-system outage (NFR-04).
-
-## Non-Functional Highlights
-
-- Requests complete within ≤ 3 seconds under expected load (NFR-01)
-- Role-based access, salted password hashes, HTTPS/TLS everywhere (NFR-02)
-- All state-changing operations recorded in an auditable activity log (NFR-03)
-- 99% uptime target during the academic term (NFR-05)
-- Server-side validation on all form input (NFR-09)
-
-## Repository Branches
-
-| Branch | Purpose |
-| --- | --- |
-| `main` | Stable, release-ready code |
-| `deploy` | Deployment configuration and pipeline for staging/production |
-| `Sprint-1-QA-Testing` | QA verification for Sprint 1 deliverables |
-| `feature/HMS-1-...` | Feature branch — Secure login & role-based access |
-| `feature/HMS-2-...` | Feature branch — Register & maintain student profiles |
-
-## Sprint Plan
-
-| Sprint | Theme |
-| --- | --- |
-| 1 | Foundation — Identity & Users |
-| 2 | Room Management |
-| 3 | Leave & Movement |
-| 4 | Complaints, Fees, Notices & Reporting |
-
-## Product Backlog (Must-priority core)
-
-| ID | User Story | Priority | Owner |
+| ID | Task | Priority | Points |
 | --- | --- | --- | --- |
-| US01 | Secure login and role-based access | Must | Member 1 |
-| US02 | Register and maintain student profiles | Must | Member 1 |
-| US03 | Manage rooms, beds and capacity | Must | Member 2 |
-| US04 | Allocate or transfer students | Must | Member 2 |
-| US05 | Submit a complete leave request | Must | Member 3 |
-| US06 | Approve or reject leave with a reason | Must | Member 3 |
-| US07 | Submit and track complaints | Must | Member 4 |
-| US08 | Publish schedules and notices | Should | Member 4 |
+| HMS-39 | Design leave request DB schema (status enum: Pending/Approved/Rejected/Closed) | High | 3 |
+| HMS-40 | Implement leave request submission API | Highest | 5 |
+| HMS-41 | Implement required-field validation (dates, reason, companion/guardian) | Highest | 2 |
+| HMS-42 | Implement date-range validation (return ≥ departure) | High | 2 |
+| HMS-43 | Implement Pending status + warden notification on submit | High | 5 |
+| HMS-44 | Implement student-facing request status tracking | Medium | 3 |
+| HMS-45 | Build leave request submission UI | High | 5 |
+| — | Unit + integration tests — submission, validation, status tracking | Medium | 5 |
 
-Full JIRA backlog: 16+ stories, acceptance criteria, priority, estimate, owner and sprint — see project documentation.
+## Dependencies
 
-## AI Usage Disclosure
+Depends on Authentication (HMS-1) and Room Management (HMS-3/HMS-4) modules being available, per the sprint plan (leave & movement is core student-facing workflow layered on Auth + Room data).
 
-Per the assignment brief, direct use of AI to generate or complete project code is prohibited. AI tools were used only for research and planning support, with disclosure.
+## Notes
+
+Business rule: a request cannot be approved when required dates, reason, or companion/guardian information is missing (enforced at submission, checked again at approval in HMS-6).
+
