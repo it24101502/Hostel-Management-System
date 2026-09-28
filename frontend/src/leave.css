@@ -1,0 +1,271 @@
+/* Leave & movement pages (HMS-5 / HMS-6).
+   These rules only add what the existing stylesheets do not
+   already provide: text areas, leave status badges and a few
+   table helpers. Everything else reuses the shared classes. */
+
+/* Text areas inside the shared form grid */
+
+.admin-form-grid textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: 13px 15px;
+  color: #101828;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  outline: none;
+  resize: vertical;
+}
+
+.admin-form-grid textarea::placeholder {
+  color: #8a94a6;
+}
+
+.admin-form-grid textarea:focus {
+  border-color: #818cf8;
+  outline: 3px solid rgba(79, 70, 229, 0.12);
+}
+
+.admin-form-grid textarea[aria-invalid="true"] {
+  border-color: #c62d2d;
+}
+
+.leave-form-full {
+  grid-column: 1 / -1;
+}
+
+.leave-char-count {
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.leave-form-help {
+  margin: 1rem 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+/* Status badges */
+
+.leave-status {
+  min-width: 92px;
+  padding: 5px 10px;
+  display: inline-flex;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.leave-status.pending {
+  color: #b54708;
+  background: #fef0c7;
+}
+
+.leave-status.approved {
+  color: #067647;
+  background: #dcfae6;
+}
+
+.leave-status.rejected {
+  color: #b42318;
+  background: #fee4e2;
+}
+
+.leave-status.departed {
+  color: #175cd3;
+  background: #d1e9ff;
+}
+
+.leave-status.closed {
+  color: #344054;
+  background: #eaecf0;
+}
+
+/* Table helpers */
+
+.leave-table {
+  min-width: 860px;
+}
+
+.leave-reason-cell {
+  max-width: 280px;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- HMS-6: review page ---------- */
+
+.leave-status.overdue {
+  color: #ffffff;
+  background: #d92d20;
+}
+
+.leave-status-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.leave-staff-table {
+  min-width: 1080px;
+}
+
+.leave-row-overdue td {
+  background: #fff8f7;
+}
+
+.leave-row-overdue:hover td {
+  background: #fff1ef;
+}
+
+/* Six status tiles: three per row instead of four */
+
+.allocation-metrics.leave-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.allocation-metrics .metric-danger strong {
+  color: #d92d20;
+}
+
+/* Filter row: date inputs next to the status select */
+
+.leave-filters input[type="date"] {
+  width: auto;
+  min-width: 150px;
+  min-height: 46px;
+  padding: 10px 12px;
+  color: #101828;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.leave-filters input[type="date"]:focus {
+  border-color: #818cf8;
+  outline: 3px solid rgba(79, 70, 229, 0.12);
+}
+
+/* Alerts panel */
+
+.leave-alert-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.leave-alert {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #eef1f6;
+}
+
+.leave-alert:last-child {
+  border-bottom: 0;
+}
+
+.leave-alert.overdue {
+  background: #fff8f7;
+}
+
+.leave-alert p {
+  margin: 4px 0;
+  color: #344054;
+}
+
+.leave-alert small {
+  color: #667085;
+}
+
+.leave-alert button {
+  width: auto;
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+/* Decision and movement dialogs */
+
+.leave-dialog {
+  width: min(520px, 100%);
+}
+
+.leave-dialog .message {
+  margin: 1rem 0 0;
+  text-align: left;
+}
+
+.leave-dialog-form {
+  margin-top: 1.25rem;
+  text-align: left;
+}
+
+.leave-dialog-form textarea {
+  width: 100%;
+  min-height: 104px;
+  padding: 13px 15px;
+  color: #101828;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  outline: none;
+  resize: vertical;
+}
+
+.leave-dialog-form textarea:focus {
+  border-color: #818cf8;
+  outline: 3px solid rgba(79, 70, 229, 0.12);
+}
+
+.leave-dialog-form textarea[aria-invalid="true"] {
+  border-color: #c62d2d;
+}
+
+.leave-dialog-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 1rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #175cd3;
+  background: #d1e9ff;
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.leave-dialog-icon.approve {
+  color: #067647;
+  background: #dcfae6;
+}
+
+@media (max-width: 900px) {
+  .allocation-metrics.leave-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .allocation-metrics.leave-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .leave-alert {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .leave-filters input[type="date"] {
+    width: 100%;
+  }
+}

@@ -17,6 +17,8 @@ build/
 .env
 .env.*
 !.env.example
+!.env.staging.example
+!.env.production.example
 
 # React dependencies and builds
 frontend/node_modules/
