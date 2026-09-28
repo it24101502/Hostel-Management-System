@@ -213,6 +213,7 @@ function StudentLeavePage() {
                       <th>Reason</th>
                       <th>Companion</th>
                       <th>Status</th>
+                      <th>Decision</th>
                     </tr>
                   </thead>
 
@@ -266,12 +267,61 @@ function StudentLeavePage() {
                         </td>
 
                         <td>
-                          <span
-                            className={`leave-status ${request.status.toLowerCase()}`}
-                          >
-                            {statusLabels[request.status] ??
-                              request.status}
-                          </span>
+                          <div className="leave-status-stack">
+                            <span
+                              className={`leave-status ${request.status.toLowerCase()}`}
+                            >
+                              {statusLabels[request.status] ??
+                                request.status}
+                            </span>
+
+                            {request.isOverdue && (
+                              <span className="leave-status overdue">
+                                Overdue
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="leave-reason-cell">
+                          <div className="room-block-cell">
+                            {request.decisionReason ? (
+                              <span>
+                                {request.decisionReason}
+                              </span>
+                            ) : (
+                              <small>
+                                Waiting for a decision
+                              </small>
+                            )}
+
+                            {request.decidedAt && (
+                              <small>
+                                Decided{" "}
+                                {formatDateTime(
+                                  request.decidedAt
+                                )}
+                              </small>
+                            )}
+
+                            {request.actualDepartureAt && (
+                              <small>
+                                Departed{" "}
+                                {formatDateTime(
+                                  request.actualDepartureAt
+                                )}
+                              </small>
+                            )}
+
+                            {request.actualReturnAt && (
+                              <small>
+                                Returned{" "}
+                                {formatDateTime(
+                                  request.actualReturnAt
+                                )}
+                              </small>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

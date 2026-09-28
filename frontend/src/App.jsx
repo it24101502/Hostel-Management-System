@@ -3,6 +3,7 @@ import RoleLandingPage from "./RoleLandingPage.jsx";
 import StudentProfilePage from
   "./StudentProfilePage.jsx";
 import StudentLeavePage from "./StudentLeavePage.jsx";
+import StaffLeavePage from "./StaffLeavePage.jsx";
 import hostelBackground from
   "./assets/hostel-night-login-background.png";
 import AdminUsersPage from
@@ -293,6 +294,14 @@ function App() {
     "/student/leave"
   ) {
     return <StudentLeavePage />;
+  }
+
+  if (
+    window.location.pathname === "/warden/leave" ||
+    window.location.pathname === "/hostel-master/leave" ||
+    window.location.pathname === "/admin/leave"
+  ) {
+    return <StaffLeavePage />;
   }
 
   if (
