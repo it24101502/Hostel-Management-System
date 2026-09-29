@@ -39,6 +39,14 @@ const modulesByRole = {
         "Allocate students, transfer rooms and monitor occupancy.",
       href: "/admin/allocations",
       accent: "violet"
+    },
+    {
+      number: "04",
+      title: "Leave report",
+      description:
+        "View leave requests, movements and overdue returns.",
+      href: "/admin/leave",
+      accent: "cyan"
     }
   ],
   STUDENT: [
@@ -49,10 +57,36 @@ const modulesByRole = {
         "View your account and update permitted information.",
       href: "/student/profile",
       accent: "indigo"
+    },
+    {
+      number: "02",
+      title: "Leave requests",
+      description:
+        "Submit leave requests and track their approval status.",
+      href: "/student/leave",
+      accent: "cyan"
     }
   ],
-  WARDEN: [],
-  HOSTEL_MASTER: []
+  WARDEN: [
+    {
+      number: "01",
+      title: "Leave requests",
+      description:
+        "Approve or reject leave, record movements and track overdue returns.",
+      href: "/warden/leave",
+      accent: "indigo"
+    }
+  ],
+  HOSTEL_MASTER: [
+    {
+      number: "01",
+      title: "Leave requests",
+      description:
+        "Approve or reject leave, record movements and track overdue returns.",
+      href: "/hostel-master/leave",
+      accent: "indigo"
+    }
+  ]
 };
 
 function RoleLandingPage({ requiredRole }) {
