@@ -169,9 +169,9 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        VITE_API_BASE_URL: http://20.212.39.185:8080
-        VITE_ACCOMMODATION_API_BASE_URL: http://20.212.39.185:8081
-        VITE_LEAVE_API_BASE_URL: http://20.212.39.185:8082
+        VITE_API_BASE_URL: http://localhost:8080
+        VITE_ACCOMMODATION_API_BASE_URL: http://localhost:8081
+        VITE_LEAVE_API_BASE_URL: http://localhost:8082
     image: hostel-frontend:sprint1
     container_name: hostel-frontend-web
     restart: unless-stopped
