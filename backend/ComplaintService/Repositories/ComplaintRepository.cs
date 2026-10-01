@@ -144,6 +144,166 @@ public class ComplaintRepository : IComplaintRepository
         return complaints;
     }
 
+        public async Task<IReadOnlyList<Complaint>> GetFilteredAsync(
+        string? status,
+        string? category)
+    {
+        string query = $"""
+            SELECT
+                {SelectColumns}
+            FROM complaints
+            WHERE (@status IS NULL OR status = @status)
+              AND (@category IS NULL OR category = @category)
+            ORDER BY created_at DESC, complaint_id DESC;
+            """;
+
+        var complaints = new List<Complaint>();
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var command =
+            new MySqlCommand(query, connection);
+
+        command.Parameters.AddWithValue(
+            "@status", (object?)status ?? DBNull.Value);
+        command.Parameters.AddWithValue(
+            "@category", (object?)category ?? DBNull.Value);
+
+        await using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            complaints.Add(MapComplaint(reader));
+        }
+
+        return complaints;
+    }
+
+    public async Task AssignAsync(
+        ulong complaintId,
+        ulong assigneeUserId,
+        ulong actorUserId,
+        string actorRole,
+        DateTime occurredAtUtc)
+    {
+        const string updateQuery = """
+            UPDATE complaints
+            SET assigned_to_user_id = @assignee,
+                assigned_at = @occurredAt
+            WHERE complaint_id = @complaintId;
+            """;
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var transaction =
+            await connection.BeginTransactionAsync();
+
+        try
+        {
+            string currentStatus;
+
+            await using (var read = new MySqlCommand(
+                "SELECT status FROM complaints WHERE complaint_id = @id;",
+                connection, transaction))
+            {
+                read.Parameters.AddWithValue("@id", complaintId);
+                currentStatus =
+                    Convert.ToString(await read.ExecuteScalarAsync())
+                    ?? throw new InvalidOperationException(
+                        "The complaint no longer exists.");
+            }
+
+            await using (var update = new MySqlCommand(
+                updateQuery, connection, transaction))
+            {
+                update.Parameters.AddWithValue("@assignee", assigneeUserId);
+                update.Parameters.AddWithValue("@occurredAt", occurredAtUtc);
+                update.Parameters.AddWithValue("@complaintId", complaintId);
+                await update.ExecuteNonQueryAsync();
+            }
+
+            await InsertAuditAsync(
+                connection, transaction, complaintId,
+                actorUserId, actorRole,
+                ComplaintAuditActions.Assign,
+                currentStatus, currentStatus,
+                $"Assigned to user {assigneeUserId}.",
+                occurredAtUtc);
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task<bool> TryChangeStatusAsync(
+        ulong complaintId,
+        string fromStatus,
+        string toStatus,
+        ulong actorUserId,
+        string actorRole,
+        string? remarks,
+        DateTime occurredAtUtc)
+    {
+        const string updateQuery = """
+            UPDATE complaints
+            SET status = @toStatus,
+                resolved_at = CASE WHEN @toStatus = 'RESOLVED'
+                                   THEN @occurredAt ELSE NULL END
+            WHERE complaint_id = @complaintId
+              AND status = @fromStatus;
+            """;
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var transaction =
+            await connection.BeginTransactionAsync();
+
+        try
+        {
+            int changedRows;
+
+            await using (var update = new MySqlCommand(
+                updateQuery, connection, transaction))
+            {
+                update.Parameters.AddWithValue("@toStatus", toStatus);
+                update.Parameters.AddWithValue("@fromStatus", fromStatus);
+                update.Parameters.AddWithValue("@occurredAt", occurredAtUtc);
+                update.Parameters.AddWithValue("@complaintId", complaintId);
+                changedRows = await update.ExecuteNonQueryAsync();
+            }
+
+            if (changedRows == 0)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            await InsertAuditAsync(
+                connection, transaction, complaintId,
+                actorUserId, actorRole,
+                ComplaintAuditActions.StatusChange,
+                fromStatus, toStatus, remarks, occurredAtUtc);
+
+            await transaction.CommitAsync();
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
     private static async Task<ulong> InsertComplaintAsync(
         MySqlConnection connection,
         MySqlTransaction transaction,

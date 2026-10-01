@@ -17,4 +17,29 @@ public interface IComplaintRepository
 
     Task<IReadOnlyList<Complaint>> GetByStudentAsync(
         ulong studentUserId);
+
+        Task<IReadOnlyList<Complaint>> GetFilteredAsync(
+        string? status,
+        string? category);
+
+    /// <summary>Sets the assignee and records an ASSIGN audit row.</summary>
+    Task AssignAsync(
+        ulong complaintId,
+        ulong assigneeUserId,
+        ulong actorUserId,
+        string actorRole,
+        DateTime occurredAtUtc);
+
+    /// <summary>
+    /// Changes the status only if it is still fromStatus.
+    /// Returns false if someone else changed it first.
+    /// </summary>
+    Task<bool> TryChangeStatusAsync(
+        ulong complaintId,
+        string fromStatus,
+        string toStatus,
+        ulong actorUserId,
+        string actorRole,
+        string? remarks,
+        DateTime occurredAtUtc);
 }
