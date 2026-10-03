@@ -3,6 +3,8 @@ using ComplaintService.Exceptions;
 using ComplaintService.Models;
 using ComplaintService.Services;
 using ComplaintService.Tests.TestDoubles;
+using NSubstitute;
+using Xunit;
 
 namespace ComplaintService.Tests;
 
@@ -12,8 +14,12 @@ public class ComplaintTriageTests
         new(2026, 10, 6, 10, 0, 0, TimeSpan.Zero);
 
     private static StaffComplaintService CreateService(
-        FakeComplaintRepository repository) =>
-        new(repository, new FixedTimeProvider(Now));
+        FakeComplaintRepository repository,
+        INotificationPublisher? notificationPublisher = null)
+    {
+        var publisher = notificationPublisher ?? Substitute.For<INotificationPublisher>();
+        return new StaffComplaintService(repository, new FixedTimeProvider(Now), publisher);
+    }
 
     [Fact]
     public async Task Assign_WithoutAssignee_AssignsToTheActingStaffMember()

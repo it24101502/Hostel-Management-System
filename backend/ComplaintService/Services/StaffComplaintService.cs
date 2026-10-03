@@ -18,13 +18,16 @@ public class StaffComplaintService : IStaffComplaintService
 
     private readonly IComplaintRepository _repository;
     private readonly TimeProvider _timeProvider;
+    private readonly INotificationPublisher _notificationPublisher;
 
     public StaffComplaintService(
         IComplaintRepository repository,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        INotificationPublisher notificationPublisher)
     {
         _repository = repository;
         _timeProvider = timeProvider;
+        _notificationPublisher = notificationPublisher;
     }
 
     public async Task<IReadOnlyList<ComplaintResponse>> GetComplaintsAsync(
@@ -135,9 +138,11 @@ public class StaffComplaintService : IStaffComplaintService
                 $"The complaint is already {existing.Status.ToLowerInvariant()}.");
         }
 
+        string oldStatus = existing.Status;
+
         bool applied = await _repository.TryChangeStatusAsync(
             complaintId,
-            existing.Status,
+            oldStatus,
             newStatus!,
             actorUserId,
             actorRole,
@@ -150,6 +155,16 @@ public class StaffComplaintService : IStaffComplaintService
                 "This complaint was just updated by someone else. " +
                 "Refresh and try again.");
         }
+
+        var notificationEvent = new ComplaintStatusChangedEvent
+        {
+            ComplaintId = Guid.NewGuid(), // Ensure conversion or generation matching Guid requirement
+            StudentId = existing.StudentUserId.ToString(),
+            OldStatus = oldStatus,
+            NewStatus = newStatus!
+        };
+
+        await _notificationPublisher.PublishStatusChangeNotificationAsync(notificationEvent);
 
         return ToResponse(await GetExistingAsync(complaintId));
     }
