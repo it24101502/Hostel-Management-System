@@ -84,4 +84,63 @@ public class ComplaintManagerTests
             Arg.Any<ComplaintStatusChangedEvent>()
         );
     }
+
+    [Fact]
+    public async Task GetComplaints_FilterByStatusAndCategory_ReturnsMatchingComplaints()
+    {
+        // Arrange
+        var mockRepo = Substitute.For<IComplaintRepository>();
+        var mockPublisher = Substitute.For<INotificationPublisher>();
+        var mockTimeProvider = TimeProvider.System;
+
+        var expectedComplaints = new List<Complaint>
+        {
+            new Complaint
+            {
+                ComplaintId = 101,
+                StudentUserId = 500,
+                Category = "PLUMBING",
+                Status = "OPEN"
+            }
+        };
+
+        mockRepo.GetFilteredAsync("OPEN", "PLUMBING").Returns(expectedComplaints);
+
+        var service = new StaffComplaintService(mockRepo, mockTimeProvider, mockPublisher);
+
+        // Act
+        var result = await service.GetComplaintsAsync("open", "plumbing");
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("PLUMBING", result[0].Category);
+        Assert.Equal("OPEN", result[0].Status);
+        await mockRepo.Received(1).GetFilteredAsync("OPEN", "PLUMBING");
+    }
+
+    [Fact]
+    public async Task GetComplaints_WithoutFilters_ReturnsAllComplaints()
+    {
+        // Arrange
+        var mockRepo = Substitute.For<IComplaintRepository>();
+        var mockPublisher = Substitute.For<INotificationPublisher>();
+        var mockTimeProvider = TimeProvider.System;
+
+        var expectedComplaints = new List<Complaint>
+        {
+            new Complaint { ComplaintId = 101, Category = "PLUMBING", Status = "OPEN" },
+            new Complaint { ComplaintId = 102, Category = "ELECTRICAL", Status = "IN_PROGRESS" }
+        };
+
+        mockRepo.GetFilteredAsync(null, null).Returns(expectedComplaints);
+
+        var service = new StaffComplaintService(mockRepo, mockTimeProvider, mockPublisher);
+
+        // Act
+        var result = await service.GetComplaintsAsync(null, null);
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        await mockRepo.Received(1).GetFilteredAsync(null, null);
+    }
 }
