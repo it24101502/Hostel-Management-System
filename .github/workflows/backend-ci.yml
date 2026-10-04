@@ -45,7 +45,7 @@ jobs:
         with:
           dotnet-version: "10.0.x"
       - name: Run tests
-        run: dotnet test backend/HostelManagement.sln --configuration Release --no-build
+        run: dotnet test backend/HostelManagement.sln --configuration Release
 
   migrate:
     runs-on: ubuntu-latest
@@ -409,7 +409,7 @@ jobs:
                       THEN 'CANCELLED'
                     WHEN fi.paid_amount >= fi.total_amount
                       THEN 'PAID'
-                    WHEN fi.due_date < UTC_DATE() OR fi.status = 'OVERDUE'
+                    WHEN fi.due_date < UTC_DATE()
                       THEN 'OVERDUE'
                     ELSE 'UNPAID'
                   END AS current_status
@@ -543,7 +543,7 @@ jobs:
             ")
 
           echo "Complaint status default: $COMPLAINT_STATUS_DEFAULT"
-          test "$COMPLAINT_STATUS_DEFAULT" = "SUBMITTED"
+          test "$COMPLAINT_STATUS_DEFAULT" = "OPEN"
 
   package:
     runs-on: ubuntu-latest
@@ -591,6 +591,20 @@ jobs:
           docker build
           --file backend/LeaveService/Dockerfile
           --tag hostel-leave-service:ci
+          .
+
+      - name: Build accommodation service Docker image
+        run: >
+          docker build
+          --file backend/AccommodationService/Dockerfile
+          --tag hostel-accommodation-service:ci
+          .
+
+      - name: Build complaint service Docker image
+        run: >
+          docker build
+          --file backend/ComplaintService/Dockerfile
+          --tag hostel-complaint-service:ci
           .
 
   deploy:
