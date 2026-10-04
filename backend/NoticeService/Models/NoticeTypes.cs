@@ -7,6 +7,11 @@ namespace NoticeService.Models;
 public static class NoticeTypes
 {
     public const string Notice = "NOTICE";
-
     public const string Schedule = "SCHEDULE";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        Notice,
+        Schedule
+    };
 }

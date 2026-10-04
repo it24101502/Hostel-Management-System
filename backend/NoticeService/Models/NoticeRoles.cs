@@ -6,8 +6,6 @@ namespace NoticeService.Models;
 /// </summary>
 public static class NoticeRoles
 {
-    public const string Student = "STUDENT";
-
     public const string Warden = "WARDEN";
 
     public const string HostelMaster = "HOSTEL_MASTER";

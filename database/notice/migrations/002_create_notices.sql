@@ -20,7 +20,7 @@ CREATE TABLE notices
     title               VARCHAR(200) NOT NULL,
     content             VARCHAR(4000) NOT NULL,
 
-    notice_type         VARCHAR(20) NOT NULL
+    notice_type         VARCHAR(50) NOT NULL
                         DEFAULT 'NOTICE',
 
     hostel_block_id     BIGINT UNSIGNED NULL,

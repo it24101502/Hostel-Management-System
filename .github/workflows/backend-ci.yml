@@ -123,6 +123,14 @@ jobs:
             mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
           done
 
+      # Notice service migrations.
+      - name: Run notice service migrations
+        run: |
+          for migration in database/notice/migrations/*.sql; do
+            echo "Running $migration"
+            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
+          done
+
       - name: Verify expected identity database tables
         run: |
           TABLE_COUNT=$(mysql \
