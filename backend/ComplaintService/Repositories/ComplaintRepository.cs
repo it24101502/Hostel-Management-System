@@ -307,22 +307,23 @@ public class ComplaintRepository : IComplaintRepository
     }
 
     public async Task AddNotificationAsync(
-        Guid notificationId,
+        Guid notificationId,          // kept so the interface doesn't change; unused
         ulong complaintId,
         ulong studentId,
         string message,
         DateTime createdAtUtc)
     {
         const string sql = """
-            INSERT INTO complaint_notifications (
-                notification_id,
+            INSERT INTO complaint_notifications
+            (
                 complaint_id,
-                student_id,
+                recipient_user_id,
                 message,
                 is_read,
                 created_at
-            ) VALUES (
-                @notificationId,
+            )
+            VALUES
+            (
                 @complaintId,
                 @studentId,
                 @message,
@@ -335,7 +336,6 @@ public class ComplaintRepository : IComplaintRepository
         await connection.OpenAsync();
 
         await using var command = new MySqlCommand(sql, connection);
-        command.Parameters.AddWithValue("@notificationId", notificationId.ToString());
         command.Parameters.AddWithValue("@complaintId", complaintId);
         command.Parameters.AddWithValue("@studentId", studentId);
         command.Parameters.AddWithValue("@message", message);
@@ -344,19 +344,20 @@ public class ComplaintRepository : IComplaintRepository
         await command.ExecuteNonQueryAsync();
     }
 
-    public async Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(ulong studentId)
+    public async Task<IReadOnlyList<StudentNotificationResponse>>
+        GetNotificationsByStudentIdAsync(ulong studentId)
     {
         const string query = """
-            SELECT 
-                notification_id AS NotificationId,
-                complaint_id AS ComplaintId,
-                student_id AS StudentId,
-                message AS Message,
-                is_read AS IsRead,
-                created_at AS CreatedAt
+            SELECT
+                notification_id   AS NotificationId,
+                complaint_id      AS ComplaintId,
+                recipient_user_id AS StudentId,
+                message           AS Message,
+                is_read           AS IsRead,
+                created_at        AS CreatedAt
             FROM complaint_notifications
-            WHERE student_id = @StudentId
-            ORDER BY created_at DESC;
+            WHERE recipient_user_id = @StudentId
+            ORDER BY created_at DESC, notification_id DESC;
             """;
 
         var notifications = new List<StudentNotificationResponse>();
@@ -377,7 +378,8 @@ public class ComplaintRepository : IComplaintRepository
                 StudentId = Convert.ToUInt64(reader["StudentId"]),
                 Message = Convert.ToString(reader["Message"])!,
                 IsRead = Convert.ToBoolean(reader["IsRead"]),
-                CreatedAt = DateTime.SpecifyKind(reader.GetDateTime("CreatedAt"), DateTimeKind.Utc)
+                CreatedAt = DateTime.SpecifyKind(
+                    reader.GetDateTime("CreatedAt"), DateTimeKind.Utc)
             });
         }
 

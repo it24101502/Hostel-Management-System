@@ -42,6 +42,49 @@ public class StaffComplaintsController : ControllerBase
         }
     }
 
+    [HttpGet("report")]
+    public async Task<IActionResult> GetReport(
+        [FromQuery] string? status,
+        [FromQuery] string? category)
+    {
+        try
+        {
+            return Ok(await _service.GetReportAsync(status, category));
+        }
+        catch (ComplaintValidationException exception)
+        {
+            return BadRequest(new ValidationErrorResponse
+            {
+                Message = exception.Message,
+                Errors = exception.Errors
+            });
+        }
+    }
+
+    [HttpGet("report/csv")]
+    public async Task<IActionResult> DownloadReportCsv(
+        [FromQuery] string? status,
+        [FromQuery] string? category)
+    {
+        try
+        {
+            byte[] csv = await _service.GenerateReportCsvAsync(status, category);
+
+            return File(
+                csv,
+                "text/csv; charset=utf-8",
+                $"complaint-report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv");
+        }
+        catch (ComplaintValidationException exception)
+        {
+            return BadRequest(new ValidationErrorResponse
+            {
+                Message = exception.Message,
+                Errors = exception.Errors
+            });
+        }
+    }
+
     [HttpPut("{complaintId:long}/assign")]
     public Task<IActionResult> Assign(
         ulong complaintId,

@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using ComplaintService.DTOs;
 using ComplaintService.Exceptions;
 using ComplaintService.Models;
@@ -180,6 +182,122 @@ public class StaffComplaintService : IStaffComplaintService
 
         return ToResponse(await GetExistingAsync(complaintId));
     }
+
+    // ================= NEW FOR HMS-56 (start) =================
+
+    public async Task<ComplaintReportResponse> GetReportAsync(
+        string? status, string? category)
+    {
+        var (cleanStatus, cleanCategory) = ValidateFilters(status, category);
+
+        // One query: everything in the chosen category.
+        var inCategory =
+            await _repository.GetFilteredAsync(null, cleanCategory);
+
+        var matching = cleanStatus is null
+            ? inCategory
+            : inCategory.Where(c => c.Status == cleanStatus).ToList();
+
+        return new ComplaintReportResponse
+        {
+            GeneratedAtUtc = _timeProvider.GetUtcNow(),
+            Totals = new ComplaintReportTotals
+            {
+                Total = inCategory.Count,
+                Open = inCategory.Count(c => c.Status == ComplaintStatuses.Open),
+                InProgress = inCategory.Count(c => c.Status == ComplaintStatuses.InProgress),
+                Resolved = inCategory.Count(c => c.Status == ComplaintStatuses.Resolved)
+            },
+            ByCategory = inCategory
+                .GroupBy(c => c.Category)
+                .Select(g => new ComplaintCategoryTotal
+                {
+                    Category = g.Key,
+                    Count = g.Count()
+                })
+                .OrderBy(t => t.Category)
+                .ToList(),
+            Complaints = matching.Select(ToResponse).ToList()
+        };
+    }
+
+    public async Task<byte[]> GenerateReportCsvAsync(
+        string? status, string? category)
+    {
+        var report = await GetReportAsync(status, category);
+
+        var csv = new StringBuilder();
+        csv.AppendLine(
+            "Complaint ID,Student,Category,Description,Status," +
+            "Assigned To,Created At,Resolved At");
+
+        foreach (var c in report.Complaints)
+        {
+            string[] values =
+            [
+                c.ComplaintId.ToString(CultureInfo.InvariantCulture),
+                c.StudentUsername,
+                c.Category,
+                c.Description,
+                c.Status,
+                c.AssignedToUserId?.ToString(CultureInfo.InvariantCulture) ?? "Unassigned",
+                c.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                c.ResolvedAt?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? ""
+            ];
+
+            csv.AppendLine(string.Join(",", values.Select(EscapeCsv)));
+        }
+
+        // UTF-8 BOM so Excel shows text correctly.
+        byte[] preamble = Encoding.UTF8.GetPreamble();
+        byte[] content = Encoding.UTF8.GetBytes(csv.ToString());
+        return preamble.Concat(content).ToArray();
+    }
+
+    private static (string? Status, string? Category) ValidateFilters(
+        string? status, string? category)
+    {
+        var errors = new Dictionary<string, string[]>();
+
+        string? cleanStatus = Normalise(status);
+        string? cleanCategory = Normalise(category);
+
+        if (cleanStatus is not null && !ValidStatuses.Contains(cleanStatus))
+        {
+            errors["status"] = new[] { "Status must be OPEN, IN_PROGRESS or RESOLVED." };
+        }
+
+        if (cleanCategory is not null &&
+            !ComplaintCategories.All.Contains(cleanCategory))
+        {
+            errors["category"] = new[] { "Unknown category." };
+        }
+
+        if (errors.Count > 0)
+        {
+            throw new ComplaintValidationException(errors);
+        }
+
+        return (cleanStatus, cleanCategory);
+    }
+
+    private static string EscapeCsv(string? value)
+    {
+        string safe = value ?? string.Empty;
+
+        // Stop spreadsheet formula injection (=, +, -, @ at the start).
+        if (safe.Length > 0 && "=+-@".Contains(safe[0]))
+        {
+            safe = "'" + safe;
+        }
+
+        bool needsQuotes = safe.Contains(',') || safe.Contains('"') ||
+                           safe.Contains('\r') || safe.Contains('\n');
+
+        return needsQuotes ? $"\"{safe.Replace("\"", "\"\"")}\"" : safe;
+    }
+
+    // ================= NEW FOR HMS-56 (end) =================
 
     private async Task<Complaint> GetExistingAsync(ulong complaintId)
     {

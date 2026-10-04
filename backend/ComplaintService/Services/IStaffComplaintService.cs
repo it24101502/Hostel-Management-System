@@ -18,4 +18,8 @@ public interface IStaffComplaintService
         UpdateComplaintStatusRequest request,
         ulong actorUserId,
         string actorRole);
+
+    Task<ComplaintReportResponse> GetReportAsync(string? status, string? category);
+
+    Task<byte[]> GenerateReportCsvAsync(string? status, string? category);
 }
