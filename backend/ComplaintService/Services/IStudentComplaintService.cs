@@ -9,17 +9,9 @@ public interface IStudentComplaintService
         ulong studentUserId,
         string studentUsername);
 
-    Task<IReadOnlyList<ComplaintResponse>> GetMyComplaintsAsync(
-        ulong studentUserId);
+    Task<IReadOnlyList<ComplaintResponse>> GetMyComplaintsAsync(ulong studentUserId);
 
-    /// <summary>
-    /// Returns null when the complaint does not exist or belongs
-    /// to another student.
-    /// </summary>
-    Task<ComplaintResponse?> GetMyComplaintAsync(
-        ulong complaintId,
-        ulong studentUserId);
+    Task<ComplaintResponse?> GetMyComplaintAsync(ulong complaintId, ulong studentUserId);
 
-    Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(
-        ulong studentId);
+    Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(ulong studentId);
 }

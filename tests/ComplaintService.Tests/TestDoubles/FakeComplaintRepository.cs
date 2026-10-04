@@ -1,3 +1,4 @@
+using ComplaintService.DTOs;
 using ComplaintService.Models;
 using ComplaintService.Repositories;
 
@@ -104,6 +105,34 @@ internal sealed class FakeComplaintRepository : IComplaintRepository
         return Task.FromResult(result);
     }
 
+    public Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(ulong studentId)
+    {
+        IReadOnlyList<StudentNotificationResponse> result = Complaints
+            .Where(c => c.StudentUserId == studentId)
+            .OrderByDescending(c => c.UpdatedAt)
+            .Select(c => new StudentNotificationResponse
+            {
+                NotificationId = c.ComplaintId.ToString(),
+                ComplaintId = c.ComplaintId,
+                Message = $"Complaint status is now: {c.Status}",
+                IsRead = false,
+                CreatedAt = c.UpdatedAt
+            })
+            .ToList();
+
+        return Task.FromResult(result);
+    }
+
+    public Task AddNotificationAsync(
+        Guid notificationId,
+        ulong studentUserId,
+        ulong complaintId,
+        string message,
+        DateTime createdAtUtc)
+    {
+        return Task.CompletedTask;
+    }
+
     public Task AssignAsync(
         ulong complaintId,
         ulong assigneeUserId,
@@ -115,6 +144,7 @@ internal sealed class FakeComplaintRepository : IComplaintRepository
 
         c.AssignedToUserId = assigneeUserId;
         c.AssignedAt = occurredAtUtc;
+        c.UpdatedAt = occurredAtUtc;
 
         AuditEntries.Add(new AuditEntry(
             complaintId, ComplaintAuditActions.Assign,
@@ -141,6 +171,7 @@ internal sealed class FakeComplaintRepository : IComplaintRepository
         }
 
         c.Status = toStatus;
+        c.UpdatedAt = occurredAtUtc;
         c.ResolvedAt =
             toStatus == ComplaintStatuses.Resolved ? occurredAtUtc : null;
 
