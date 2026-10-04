@@ -59,10 +59,9 @@ public class NoticesController : ControllerBase
             return Unauthorized(new ErrorResponse { Message = "Invalid user claims." });
         }
 
-        var newNoticeId = await _noticeRepository.CreateAsync(request, userId, userRole);
-        var createdNotice = await _noticeRepository.GetByIdAsync(newNoticeId);
+        var createdNotice = await _noticeRepository.CreateAsync(request, userId, userRole);
 
-        return CreatedAtAction(nameof(GetNoticeById), new { id = newNoticeId }, createdNotice);
+        return CreatedAtAction(nameof(GetNoticeById), new { id = createdNotice.NoticeId }, createdNotice);
     }
 
     [HttpGet]
@@ -82,6 +81,19 @@ public class NoticesController : ControllerBase
         }
 
         return Ok(notice);
+    }
+
+    [HttpGet("student")]
+    [RequireRole(NoticeRoles.Student, NoticeRoles.Warden, NoticeRoles.HostelMaster, NoticeRoles.Admin)]
+    public async Task<IActionResult> GetStudentNotices([FromQuery] ulong hostelBlockId)
+    {
+        if (hostelBlockId == 0)
+        {
+            return BadRequest(new ErrorResponse { Message = "Hostel block ID is required." });
+        }
+
+        var notices = await _noticeRepository.GetStudentNoticesAsync(hostelBlockId);
+        return Ok(notices);
     }
 
     [HttpPut("{id:ulong}")]

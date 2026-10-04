@@ -17,7 +17,7 @@ public class NoticeRepository : INoticeRepository
 
     private IDbConnection CreateConnection() => new MySqlConnection(_connectionString);
 
-    public async Task<ulong> CreateAsync(CreateNoticeRequest request, ulong userId, string userRole)
+    public async Task<NoticeResponse> CreateAsync(CreateNoticeRequest request, ulong userId, string userRole)
     {
         using var connection = CreateConnection();
         connection.Open();
@@ -57,7 +57,8 @@ public class NoticeRepository : INoticeRepository
         }, transaction);
 
         transaction.Commit();
-        return noticeId;
+
+        return (await GetByIdAsync(noticeId))!;
     }
 
     public async Task<NoticeResponse?> GetByIdAsync(ulong noticeId)
@@ -194,5 +195,30 @@ public class NoticeRepository : INoticeRepository
 
         transaction.Commit();
         return true;
+    }
+
+    public async Task<IEnumerable<NoticeResponse>> GetStudentNoticesAsync(ulong hostelBlockId)
+    {
+        const string sql = @"
+            SELECT 
+                notice_id AS NoticeId,
+                title AS Title,
+                content AS Content,
+                notice_type AS NoticeType,
+                hostel_block_id AS HostelBlockId,
+                expiry_date AS ExpiryDate,
+                is_archived AS IsArchived,
+                archived_at AS ArchivedAt,
+                created_by_user_id AS CreatedByUserId,
+                created_at AS CreatedAt,
+                updated_at AS UpdatedAt
+            FROM notices
+            WHERE is_archived = FALSE 
+              AND (expiry_date IS NULL OR expiry_date >= CURRENT_DATE())
+              AND (hostel_block_id = @HostelBlockId OR hostel_block_id IS NULL)
+            ORDER BY created_at DESC;";
+
+        using var connection = CreateConnection();
+        return await connection.QueryAsync<NoticeResponse>(sql, new { HostelBlockId = hostelBlockId });
     }
 }

@@ -45,8 +45,7 @@ public class NoticesControllerTests
         var request = new CreateNoticeRequest("Hostel Meeting", "Mandatory attendance.", "NOTICE", 1, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)));
         var response = new NoticeResponse(1, request.Title, request.Content, request.NoticeType, request.HostelBlockId, request.ExpiryDate, false, null, 10, DateTime.UtcNow, DateTime.UtcNow);
 
-        _mockRepository.Setup(r => r.CreateAsync(request, 10, "WARDEN")).ReturnsAsync(1UL);
-        _mockRepository.Setup(r => r.GetByIdAsync(1UL)).ReturnsAsync(response);
+        _mockRepository.Setup(r => r.CreateAsync(request, 10, "WARDEN")).ReturnsAsync(response);
 
         var result = await _controller.CreateNotice(request);
 
@@ -88,4 +87,38 @@ public class NoticesControllerTests
 
         Assert.IsType<NoContentResult>(result);
     }
+
+    [Fact]
+    public async Task GetStudentNotices_ReturnsOkWithFilteredNotices_WhenBlockIdIsValid()
+    {
+        // Arrange
+        ulong hostelBlockId = 1UL;
+        var notices = new List<NoticeResponse>
+        {
+            new NoticeResponse(1, "Block Notice", "Details", "NOTICE", 1, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)), false, null, 10, DateTime.UtcNow, DateTime.UtcNow),
+            new NoticeResponse(2, "General Notice", "General Details", "NOTICE", null, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5)), false, null, 10, DateTime.UtcNow, DateTime.UtcNow)
+        };
+
+        _mockRepository.Setup(r => r.GetStudentNoticesAsync(hostelBlockId)).ReturnsAsync(notices);
+
+        // Act
+        var result = await _controller.GetStudentNotices(hostelBlockId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        var returnedNotices = Assert.IsAssignableFrom<IEnumerable<NoticeResponse>>(okResult.Value);
+        Assert.Equal(2, returnedNotices.Count());
+    }
+
+    [Fact]
+    public async Task GetStudentNotices_ReturnsBadRequest_WhenHostelBlockIdIsZero()
+    {
+        // Act
+        var result = await _controller.GetStudentNotices(0);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
 }
