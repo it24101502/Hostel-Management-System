@@ -150,30 +150,33 @@ public class StaffComplaintService : IStaffComplaintService
             remarks,
             nowUtc);
 
-        if (applied)
+        if (!applied)
         {
-            string message = $"Your complaint #{complaintId} status changed from {oldStatus} to {newStatus}.";
-
-            await _repository.AddNotificationAsync(
-                Guid.NewGuid(),
-                complaintId,
-                existing.StudentUserId,
-                message,
-                nowUtc
-            );
-
-            // Publish Kafka / Background Event
-            var notificationEvent = new ComplaintStatusChangedEvent
-            {
-                ComplaintId = existing.ComplaintId,
-                StudentId = existing.StudentUserId.ToString(),
-                OldStatus = oldStatus,
-                NewStatus = newStatus!,
-                Timestamp = nowUtc
-            };
-
-            await _notificationPublisher.PublishStatusChangeNotificationAsync(notificationEvent);
+            throw new InvalidComplaintStatusException(
+                "Failed to update status. A concurrent update occurred or the complaint state was modified.");
         }
+
+        string message = $"Your complaint #{complaintId} status changed from {oldStatus} to {newStatus}.";
+
+        await _repository.AddNotificationAsync(
+            Guid.NewGuid(),
+            complaintId,
+            existing.StudentUserId,
+            message,
+            nowUtc
+        );
+
+        // Publish Kafka / Background Event
+        var notificationEvent = new ComplaintStatusChangedEvent
+        {
+            ComplaintId = existing.ComplaintId,
+            StudentId = existing.StudentUserId.ToString(),
+            OldStatus = oldStatus,
+            NewStatus = newStatus!,
+            Timestamp = nowUtc
+        };
+
+        await _notificationPublisher.PublishStatusChangeNotificationAsync(notificationEvent);
 
         return ToResponse(await GetExistingAsync(complaintId));
     }

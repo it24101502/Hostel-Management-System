@@ -7,6 +7,8 @@ namespace ComplaintService.Services;
 
 public class StudentComplaintService : IStudentComplaintService
 {
+    public const int MaxDescriptionLength = 1000;
+
     private readonly IComplaintRepository _repository;
     private readonly TimeProvider _timeProvider;
 
@@ -36,6 +38,13 @@ public class StudentComplaintService : IStudentComplaintService
         if (string.IsNullOrWhiteSpace(cleanDescription))
         {
             errors["description"] = new[] { "Description is required." };
+        }
+        else if (cleanDescription.Length > MaxDescriptionLength)
+        {
+            errors["description"] = new[]
+            {
+                $"Description cannot exceed {MaxDescriptionLength} characters."
+            };
         }
 
         if (errors.Count > 0)
