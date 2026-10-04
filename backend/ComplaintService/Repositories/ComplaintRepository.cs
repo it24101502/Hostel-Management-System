@@ -1,5 +1,7 @@
 using ComplaintService.Models;
+using Microsoft.Extensions.Configuration;
 using MySqlConnector;
+using ComplaintService.DTOs;
 
 namespace ComplaintService.Repositories;
 
@@ -144,7 +146,7 @@ public class ComplaintRepository : IComplaintRepository
         return complaints;
     }
 
-        public async Task<IReadOnlyList<Complaint>> GetFilteredAsync(
+    public async Task<IReadOnlyList<Complaint>> GetFilteredAsync(
         string? status,
         string? category)
     {
@@ -302,6 +304,84 @@ public class ComplaintRepository : IComplaintRepository
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    public async Task AddNotificationAsync(
+        Guid notificationId,
+        ulong complaintId,
+        ulong studentId,
+        string message,
+        DateTime createdAtUtc)
+    {
+        const string sql = """
+            INSERT INTO complaint_notifications (
+                notification_id,
+                complaint_id,
+                student_id,
+                message,
+                is_read,
+                created_at
+            ) VALUES (
+                @notificationId,
+                @complaintId,
+                @studentId,
+                @message,
+                0,
+                @createdAt
+            );
+            """;
+
+        await using var connection = new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var command = new MySqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@notificationId", notificationId.ToString());
+        command.Parameters.AddWithValue("@complaintId", complaintId);
+        command.Parameters.AddWithValue("@studentId", studentId);
+        command.Parameters.AddWithValue("@message", message);
+        command.Parameters.AddWithValue("@createdAt", createdAtUtc);
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+    public async Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(ulong studentId)
+    {
+        const string query = """
+            SELECT 
+                notification_id AS NotificationId,
+                complaint_id AS ComplaintId,
+                student_id AS StudentId,
+                message AS Message,
+                is_read AS IsRead,
+                created_at AS CreatedAt
+            FROM complaint_notifications
+            WHERE student_id = @StudentId
+            ORDER BY created_at DESC;
+            """;
+
+        var notifications = new List<StudentNotificationResponse>();
+
+        await using var connection = new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var command = new MySqlCommand(query, connection);
+        command.Parameters.AddWithValue("@StudentId", studentId);
+
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            notifications.Add(new StudentNotificationResponse
+            {
+                NotificationId = Convert.ToString(reader["NotificationId"])!,
+                ComplaintId = Convert.ToUInt64(reader["ComplaintId"]),
+                StudentId = Convert.ToUInt64(reader["StudentId"]),
+                Message = Convert.ToString(reader["Message"])!,
+                IsRead = Convert.ToBoolean(reader["IsRead"]),
+                CreatedAt = DateTime.SpecifyKind(reader.GetDateTime("CreatedAt"), DateTimeKind.Utc)
+            });
+        }
+
+        return notifications;
     }
 
     private static async Task<ulong> InsertComplaintAsync(
@@ -474,10 +554,6 @@ public class ComplaintRepository : IComplaintRepository
             ResolvedAt =
                 ReadNullableUtcDateTime(reader, "resolved_at"),
 
-            // MySQL returns DATETIME without a time zone. The
-            // service stores UTC, so mark the value as UTC so it is
-            // serialised with a trailing "Z" and browsers convert
-            // it to the viewer's local time correctly.
             CreatedAt =
                 DateTime.SpecifyKind(
                     reader.GetDateTime("created_at"),

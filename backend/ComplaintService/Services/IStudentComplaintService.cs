@@ -19,4 +19,7 @@ public interface IStudentComplaintService
     Task<ComplaintResponse?> GetMyComplaintAsync(
         ulong complaintId,
         ulong studentUserId);
+
+    Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(
+        ulong studentId);
 }

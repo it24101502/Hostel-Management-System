@@ -139,6 +139,7 @@ public class StaffComplaintService : IStaffComplaintService
         }
 
         string oldStatus = existing.Status;
+        DateTime nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         bool applied = await _repository.TryChangeStatusAsync(
             complaintId,
@@ -147,24 +148,32 @@ public class StaffComplaintService : IStaffComplaintService
             actorUserId,
             actorRole,
             remarks,
-            _timeProvider.GetUtcNow().UtcDateTime);
+            nowUtc);
 
-        if (!applied)
+        if (applied)
         {
-            throw new InvalidComplaintStatusException(
-                "This complaint was just updated by someone else. " +
-                "Refresh and try again.");
+            string message = $"Your complaint #{complaintId} status changed from {oldStatus} to {newStatus}.";
+
+            await _repository.AddNotificationAsync(
+                Guid.NewGuid(),
+                complaintId,
+                existing.StudentUserId,
+                message,
+                nowUtc
+            );
+
+            // Publish Kafka / Background Event
+            var notificationEvent = new ComplaintStatusChangedEvent
+            {
+                ComplaintId = existing.ComplaintId,
+                StudentId = existing.StudentUserId.ToString(),
+                OldStatus = oldStatus,
+                NewStatus = newStatus!,
+                Timestamp = nowUtc
+            };
+
+            await _notificationPublisher.PublishStatusChangeNotificationAsync(notificationEvent);
         }
-
-        var notificationEvent = new ComplaintStatusChangedEvent
-        {
-            ComplaintId = Guid.NewGuid(), // Ensure conversion or generation matching Guid requirement
-            StudentId = existing.StudentUserId.ToString(),
-            OldStatus = oldStatus,
-            NewStatus = newStatus!
-        };
-
-        await _notificationPublisher.PublishStatusChangeNotificationAsync(notificationEvent);
 
         return ToResponse(await GetExistingAsync(complaintId));
     }

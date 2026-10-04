@@ -1,4 +1,5 @@
 using ComplaintService.Models;
+using ComplaintService.DTOs;
 
 namespace ComplaintService.Repositories;
 
@@ -42,4 +43,16 @@ public interface IComplaintRepository
         string actorRole,
         string? remarks,
         DateTime occurredAtUtc);
+
+    /// <summary>
+    /// Inserts a student notification when a complaint status changes.
+    /// </summary>
+    Task AddNotificationAsync(
+        Guid notificationId,
+        ulong complaintId,
+        ulong studentId,
+        string message,
+        DateTime createdAtUtc);
+
+    Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(ulong studentId);
 }
