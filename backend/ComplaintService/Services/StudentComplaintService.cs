@@ -7,8 +7,6 @@ namespace ComplaintService.Services;
 
 public class StudentComplaintService : IStudentComplaintService
 {
-    public const int MaxDescriptionLength = 1000;
-
     private readonly IComplaintRepository _repository;
     private readonly TimeProvider _timeProvider;
 
@@ -25,103 +23,75 @@ public class StudentComplaintService : IStudentComplaintService
         ulong studentUserId,
         string studentUsername)
     {
-        var errors = Validate(request);
+        var errors = new Dictionary<string, string[]>();
+
+        string? cleanCategory = Normalise(request.Category);
+        string? cleanDescription = request.Description?.Trim();
+
+        if (cleanCategory is null || !ComplaintCategories.All.Contains(cleanCategory))
+        {
+            errors["category"] = new[] { "Unknown category." };
+        }
+
+        if (string.IsNullOrWhiteSpace(cleanDescription))
+        {
+            errors["description"] = new[] { "Description is required." };
+        }
 
         if (errors.Count > 0)
         {
             throw new ComplaintValidationException(errors);
         }
 
-        // Validate guarantees these values are present and valid.
         var newComplaint = new NewComplaint
         {
             StudentUserId = studentUserId,
             StudentUsername = studentUsername,
-            Category = request.Category!.Trim().ToUpperInvariant(),
-            Description = request.Description!.Trim()
+            Category = cleanCategory!,
+            Description = cleanDescription!
         };
 
-        Complaint created =
-            await _repository.CreateAsync(
-                newComplaint,
-                _timeProvider.GetUtcNow().UtcDateTime);
+        DateTime nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        var created = await _repository.CreateAsync(newComplaint, nowUtc);
 
-        return MapResponse(created);
+        return ToResponse(created);
     }
 
-    public async Task<IReadOnlyList<ComplaintResponse>>
-        GetMyComplaintsAsync(ulong studentUserId)
+    public async Task<IReadOnlyList<ComplaintResponse>> GetMyComplaintsAsync(
+        ulong studentUserId)
     {
-        var complaints =
-            await _repository.GetByStudentAsync(studentUserId);
-
-        return complaints.Select(MapResponse).ToList();
+        var complaints = await _repository.GetByStudentAsync(studentUserId);
+        return complaints.Select(ToResponse).ToList();
     }
 
     public async Task<ComplaintResponse?> GetMyComplaintAsync(
         ulong complaintId,
         ulong studentUserId)
     {
-        var complaint =
-            await _repository.GetByIdAsync(complaintId);
+        var complaint = await _repository.GetByIdAsync(complaintId);
 
-        // Another student's complaint is reported as "not found"
-        // so its existence is not revealed.
-        if (complaint is null ||
-            complaint.StudentUserId != studentUserId)
+        if (complaint is null || complaint.StudentUserId != studentUserId)
         {
             return null;
         }
 
-        return MapResponse(complaint);
+        return ToResponse(complaint);
     }
 
-    private static Dictionary<string, string[]> Validate(
-        SubmitComplaintRequest request)
+    public async Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(
+        ulong studentId)
     {
-        var errors = new Dictionary<string, string[]>();
-
-        string category =
-            request.Category?.Trim().ToUpperInvariant() ?? string.Empty;
-
-        if (category.Length == 0)
-        {
-            errors["category"] = new[]
-            {
-                "Category is required."
-            };
-        }
-        else if (!ComplaintCategories.All.Contains(category))
-        {
-            errors["category"] = new[]
-            {
-                "Category must be one of: " +
-                string.Join(", ", ComplaintCategories.All) + "."
-            };
-        }
-
-        string description = request.Description?.Trim() ?? string.Empty;
-
-        if (description.Length == 0)
-        {
-            errors["description"] = new[]
-            {
-                "Description is required."
-            };
-        }
-        else if (description.Length > MaxDescriptionLength)
-        {
-            errors["description"] = new[]
-            {
-                $"Description cannot exceed {MaxDescriptionLength} characters."
-            };
-        }
-
-        return errors;
+        return await _repository.GetNotificationsByStudentIdAsync(studentId);
     }
 
-    private static ComplaintResponse MapResponse(
-        Complaint complaint)
+    private static string? Normalise(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim().ToUpperInvariant();
+    }
+
+    private static ComplaintResponse ToResponse(Complaint complaint)
     {
         return new ComplaintResponse
         {
