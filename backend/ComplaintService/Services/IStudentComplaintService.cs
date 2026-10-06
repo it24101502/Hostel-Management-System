@@ -1,0 +1,19 @@
+using ComplaintService.DTOs;
+
+namespace ComplaintService.Services;
+
+public interface IStudentComplaintService
+{
+    Task<ComplaintResponse> SubmitAsync(
+        SubmitComplaintRequest request,
+        ulong studentUserId,
+        string studentUsername);
+
+    Task<IReadOnlyList<ComplaintResponse>> GetMyComplaintsAsync(ulong studentUserId);
+
+    Task<ComplaintResponse?> GetMyComplaintAsync(ulong complaintId, ulong studentUserId);
+
+    Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(ulong studentId);
+    
+    Task<bool> MarkNotificationReadAsync(ulong notificationId, ulong studentUserId);
+}

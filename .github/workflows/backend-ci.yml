@@ -12,12 +12,13 @@ on:
       - Sprint-1-QA-Testing
       - Sprint-2-QA-Testing
       - Sprint-3-QA-Testing
+      - Sprint-4-QA-Testing
       - deploy
 
   pull_request:
     branches:
       - main
-      - Sprint-3-QA-Testing
+      - Sprint-4-QA-Testing
       - deploy
 
 jobs:
@@ -44,19 +45,13 @@ jobs:
         with:
           dotnet-version: "10.0.x"
       - name: Run tests
-        run: dotnet test backend/HostelManagement.sln --configuration Release --no-build
+        run: dotnet test backend/HostelManagement.sln --configuration Release
 
   migrate:
     runs-on: ubuntu-latest
     needs: test
-    environment: staging   # or production
+    environment: staging
 
-    # NOTE: the "options" field for a service container cannot use the
-    # secrets/env expression context (${{ secrets.X }}) — GitHub Actions
-    # rejects it with "Unrecognized named-value: 'secrets'". The password
-    # is still available *inside* the mysql container as a normal shell
-    # environment variable (set below via services.mysql.env), so the
-    # health-check just references it as $MYSQL_ROOT_PASSWORD instead.
     services:
       mysql:
         image: mysql:8.4
@@ -92,33 +87,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mysql-client
 
-      # Identity service migrations.
-      # No --database flag here: 001_create_auth_schema.sql creates
-      # Hostel_Management_System itself, so the database does not exist
-      # yet when this step connects.
       - name: Run identity service migrations
         run: |
-          for migration in database/migrations/*.sql; do
+          for migration in $(ls -1 database/migrations/*.sql | sort -V); do
             echo "Running $migration"
             mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
           done
 
-      # Accommodation service migrations.
-      # Same reasoning: 001_create_accommodation_database.sql creates
-      # Hostel_Accommodation_System itself.
       - name: Run accommodation service migrations
         run: |
-          for migration in database/accommodation/migrations/*.sql; do
+          for migration in $(ls -1 database/accommodation/migrations/*.sql | sort -V); do
             echo "Running $migration"
             mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
           done
 
-      # Leave service migrations.
-      # Same reasoning: 001_create_leave_database.sql creates
-      # Hostel_Leave_System itself.
       - name: Run leave service migrations
         run: |
-          for migration in database/leave/migrations/*.sql; do
+          for migration in $(ls -1 database/leave/migrations/*.sql | sort -V); do
+            echo "Running $migration"
+            mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
+          done
+
+      - name: Run complaint service migrations
+        run: |
+          for migration in $(ls -1 database/complaint/migrations/*.sql | sort -V); do
             echo "Running $migration"
             mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" < "$migration"
           done
@@ -143,10 +135,8 @@ jobs:
             --execute="
               SELECT COUNT(*)
               FROM information_schema.tables
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Management_System')
-                AND table_name IN
-                (
+              WHERE LOWER(table_schema) = LOWER('Hostel_Management_System')
+                AND table_name IN (
                   'roles',
                   'users',
                   'user_sessions',
@@ -164,7 +154,6 @@ jobs:
 
           if [ "$TABLE_COUNT" -ne 10 ]; then
             echo "Database tables currently available:"
-
             mysql \
               --host=127.0.0.1 \
               --port=3306 \
@@ -173,11 +162,9 @@ jobs:
               --execute="
                 SELECT table_schema, table_name
                 FROM information_schema.tables
-                WHERE LOWER(table_schema) =
-                      LOWER('Hostel_Management_System')
+                WHERE LOWER(table_schema) = LOWER('Hostel_Management_System')
                 ORDER BY table_name;
               "
-
             exit 1
           fi
 
@@ -193,10 +180,8 @@ jobs:
             --execute="
               SELECT COUNT(*)
               FROM information_schema.tables
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Accommodation_System')
-                AND table_name IN
-                (
+              WHERE LOWER(table_schema) = LOWER('Hostel_Accommodation_System')
+                AND table_name IN (
                   'hostel_blocks',
                   'hostel_rooms',
                   'student_room_allocations',
@@ -209,7 +194,6 @@ jobs:
 
           if [ "$TABLE_COUNT" -ne 5 ]; then
             echo "Accommodation database tables currently available:"
-
             mysql \
               --host=127.0.0.1 \
               --port=3306 \
@@ -218,11 +202,9 @@ jobs:
               --execute="
                 SELECT table_schema, table_name
                 FROM information_schema.tables
-                WHERE LOWER(table_schema) =
-                      LOWER('Hostel_Accommodation_System')
+                WHERE LOWER(table_schema) = LOWER('Hostel_Accommodation_System')
                 ORDER BY table_name;
               "
-
             exit 1
           fi
 
@@ -238,10 +220,8 @@ jobs:
             --execute="
               SELECT COUNT(*)
               FROM information_schema.tables
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Leave_System')
-                AND table_name IN
-                (
+              WHERE LOWER(table_schema) = LOWER('Hostel_Leave_System')
+                AND table_name IN (
                   'leave_requests',
                   'leave_request_audit_logs',
                   'leave_notifications'
@@ -252,7 +232,6 @@ jobs:
 
           if [ "$TABLE_COUNT" -ne 3 ]; then
             echo "Leave database tables currently available:"
-
             mysql \
               --host=127.0.0.1 \
               --port=3306 \
@@ -261,11 +240,9 @@ jobs:
               --execute="
                 SELECT table_schema, table_name
                 FROM information_schema.tables
-                WHERE LOWER(table_schema) =
-                      LOWER('Hostel_Leave_System')
+                WHERE LOWER(table_schema) = LOWER('Hostel_Leave_System')
                 ORDER BY table_name;
               "
-
             exit 1
           fi
 
@@ -280,16 +257,12 @@ jobs:
             --skip-column-names \
             --execute="
               SELECT CONCAT(
-                SUM(constraint_name =
-                    'chk_leave_requests_dates'), ',',
-                SUM(constraint_name =
-                    'chk_leave_requests_status'), ',',
-                SUM(constraint_name =
-                    'chk_leave_requests_required_text')
+                SUM(constraint_name = 'chk_leave_requests_dates'), ',',
+                SUM(constraint_name = 'chk_leave_requests_status'), ',',
+                SUM(constraint_name = 'chk_leave_requests_required_text')
               )
               FROM information_schema.table_constraints
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Leave_System')
+              WHERE LOWER(table_schema) = LOWER('Hostel_Leave_System')
                 AND table_name = 'leave_requests';
             ")
 
@@ -304,10 +277,9 @@ jobs:
             --batch \
             --skip-column-names \
             --execute="
-              SELECT column_default
+              SELECT TRIM(BOTH '\'' FROM column_default)
               FROM information_schema.columns
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Leave_System')
+              WHERE LOWER(table_schema) = LOWER('Hostel_Leave_System')
                 AND table_name = 'leave_requests'
                 AND column_name = 'status';
             ")
@@ -327,11 +299,9 @@ jobs:
             --execute="
               SELECT COUNT(*)
               FROM information_schema.columns
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Leave_System')
+              WHERE LOWER(table_schema) = LOWER('Hostel_Leave_System')
                 AND table_name = 'leave_requests'
-                AND column_name IN
-                (
+                AND column_name IN (
                   'decided_by_user_id',
                   'decision_reason',
                   'decided_at',
@@ -355,14 +325,11 @@ jobs:
             --skip-column-names \
             --execute="
               SELECT CONCAT(
-                SUM(constraint_name =
-                    'chk_leave_requests_decision'), ',',
-                SUM(constraint_name =
-                    'chk_leave_requests_movement')
+                SUM(constraint_name = 'chk_leave_requests_decision'), ',',
+                SUM(constraint_name = 'chk_leave_requests_movement')
               )
               FROM information_schema.table_constraints
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Leave_System')
+              WHERE LOWER(table_schema) = LOWER('Hostel_Leave_System')
                 AND table_name = 'leave_requests';
             ")
 
@@ -396,8 +363,7 @@ jobs:
                 SUM(column_name = 'bed_capacity')
               )
               FROM information_schema.columns
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Accommodation_System')
+              WHERE LOWER(table_schema) = LOWER('Hostel_Accommodation_System')
                 AND table_name = 'hostel_rooms';
             ")
 
@@ -413,16 +379,12 @@ jobs:
             --skip-column-names \
             --execute="
               SELECT CONCAT(
-                SUM(constraint_name =
-                    'uq_hostel_rooms_location'), ',',
-                SUM(constraint_name =
-                    'fk_hostel_rooms_block'), ',',
-                SUM(constraint_name =
-                    'chk_hostel_rooms_bed_capacity')
+                SUM(constraint_name = 'uq_hostel_rooms_location'), ',',
+                SUM(constraint_name = 'fk_hostel_rooms_block'), ',',
+                SUM(constraint_name = 'chk_hostel_rooms_bed_capacity')
               )
               FROM information_schema.table_constraints
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Accommodation_System')
+              WHERE LOWER(table_schema) = LOWER('Hostel_Accommodation_System')
                 AND table_name = 'hostel_rooms';
             ")
 
@@ -453,8 +415,7 @@ jobs:
                   CASE
                     WHEN fi.status = 'CANCELLED'
                       THEN 'CANCELLED'
-                    WHEN fi.paid_amount >=
-                         fi.total_amount
+                    WHEN fi.paid_amount >= fi.total_amount
                       THEN 'PAID'
                     WHEN fi.due_date < UTC_DATE()
                       THEN 'OVERDUE'
@@ -462,11 +423,9 @@ jobs:
                   END AS current_status
                 FROM fee_invoices AS fi
                 INNER JOIN student_profiles AS sp
-                  ON sp.student_profile_id =
-                     fi.student_profile_id
+                  ON sp.student_profile_id = fi.student_profile_id
                 INNER JOIN hostel_blocks AS hb
-                  ON hb.block_id =
-                     sp.hostel_block_id
+                  ON hb.block_id = sp.hostel_block_id
                 WHERE hb.block_code = 'CI-A'
               ) AS report_rows;
             ")
@@ -486,16 +445,14 @@ jobs:
             --batch \
             --skip-column-names \
             --execute="
-              SELECT column_default
+              SELECT TRIM(BOTH '\'' FROM column_default)
               FROM information_schema.columns
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Management_System')
+              WHERE LOWER(table_schema) = LOWER('Hostel_Management_System')
                 AND table_name = 'fee_invoices'
                 AND column_name = 'status';
             ")
 
           echo "Invoice status default: $STATUS_DEFAULT"
-
           test "$STATUS_DEFAULT" = "UNPAID"
 
       - name: Verify fee reminder configuration
@@ -508,19 +465,93 @@ jobs:
             --batch \
             --skip-column-names \
             --execute="
-              SELECT column_default
+              SELECT TRIM(BOTH '\'' FROM column_default)
               FROM information_schema.columns
-              WHERE LOWER(table_schema) =
-                    LOWER('Hostel_Management_System')
-                AND table_name =
-                    'fee_reminder_notifications'
-                AND column_name =
-                    'notification_status';
+              WHERE LOWER(table_schema) = LOWER('Hostel_Management_System')
+                AND table_name = 'fee_reminder_notifications'
+                AND column_name = 'notification_status';
             ")
 
           echo "Reminder status default: $REMINDER_DEFAULT"
-
           test "$REMINDER_DEFAULT" = "PENDING"
+
+      - name: Verify expected complaint database tables
+        run: |
+          TABLE_COUNT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT COUNT(*)
+              FROM information_schema.tables
+              WHERE LOWER(table_schema) = LOWER('Hostel_Complaint_System')
+                AND table_name IN (
+                  'complaints',
+                  'complaint_audit_logs',
+                  'complaint_notifications'
+                );
+            ")
+
+          echo "Expected 3 complaint tables; found $TABLE_COUNT."
+
+          if [ "$TABLE_COUNT" -ne 3 ]; then
+            echo "Complaint database tables currently available:"
+            mysql \
+              --host=127.0.0.1 \
+              --port=3306 \
+              --user=root \
+              --password="$MYSQL_ROOT_PASSWORD" \
+              --execute="
+                SELECT table_schema, table_name
+                FROM information_schema.tables
+                WHERE LOWER(table_schema) = LOWER('Hostel_Complaint_System')
+                ORDER BY table_name;
+              "
+            exit 1
+          fi
+
+      - name: Verify complaint status and category schema
+        run: |
+          COMPLAINT_CONSTRAINT_RESULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT CONCAT(
+                SUM(constraint_name = 'chk_complaints_status'), ',',
+                SUM(constraint_name = 'chk_complaints_category')
+              )
+              FROM information_schema.table_constraints
+              WHERE LOWER(table_schema) = LOWER('Hostel_Complaint_System')
+                AND table_name = 'complaints';
+            ")
+
+          echo "Required complaint constraints: $COMPLAINT_CONSTRAINT_RESULT"
+          test "$COMPLAINT_CONSTRAINT_RESULT" = "1,1"
+
+          COMPLAINT_STATUS_DEFAULT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT TRIM(BOTH '\'' FROM column_default)
+              FROM information_schema.columns
+              WHERE LOWER(table_schema) = LOWER('Hostel_Complaint_System')
+                AND table_name = 'complaints'
+                AND column_name = 'status';
+            ")
+
+          echo "Complaint status default: $COMPLAINT_STATUS_DEFAULT"
+          test "$COMPLAINT_STATUS_DEFAULT" = "OPEN"
 
   package:
     runs-on: ubuntu-latest
@@ -568,6 +599,20 @@ jobs:
           docker build
           --file backend/LeaveService/Dockerfile
           --tag hostel-leave-service:ci
+          .
+
+      - name: Build accommodation service Docker image
+        run: >
+          docker build
+          --file backend/AccommodationService/Dockerfile
+          --tag hostel-accommodation-service:ci
+          .
+
+      - name: Build complaint service Docker image
+        run: >
+          docker build
+          --file backend/ComplaintService/Dockerfile
+          --tag hostel-complaint-service:ci
           .
 
   deploy:
