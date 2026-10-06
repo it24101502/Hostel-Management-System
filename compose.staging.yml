@@ -17,11 +17,18 @@ services:
     ports:
       - "8092:8080"
 
+  complaint-api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+    ports:
+      - "8093:8080"
+
   frontend:
     build:
       args:
         VITE_API_BASE_URL: http://localhost:8090
         VITE_ACCOMMODATION_API_BASE_URL: http://localhost:8091
         VITE_LEAVE_API_BASE_URL: http://localhost:8092
+        VITE_COMPLAINT_API_BASE_URL: http://localhost:8093
     ports:
       - "5174:80"
