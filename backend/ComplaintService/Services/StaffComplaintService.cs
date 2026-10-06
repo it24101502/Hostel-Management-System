@@ -4,6 +4,7 @@ using ComplaintService.DTOs;
 using ComplaintService.Exceptions;
 using ComplaintService.Models;
 using ComplaintService.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace ComplaintService.Services;
 
@@ -21,15 +22,18 @@ public class StaffComplaintService : IStaffComplaintService
     private readonly IComplaintRepository _repository;
     private readonly TimeProvider _timeProvider;
     private readonly INotificationPublisher _notificationPublisher;
+    private readonly ILogger<StaffComplaintService>? _logger;
 
     public StaffComplaintService(
         IComplaintRepository repository,
         TimeProvider timeProvider,
-        INotificationPublisher notificationPublisher)
+        INotificationPublisher notificationPublisher,
+        ILogger<StaffComplaintService>? logger = null)
     {
         _repository = repository;
         _timeProvider = timeProvider;
         _notificationPublisher = notificationPublisher;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<ComplaintResponse>> GetComplaintsAsync(
@@ -158,7 +162,8 @@ public class StaffComplaintService : IStaffComplaintService
                 "Failed to update status. A concurrent update occurred or the complaint state was modified.");
         }
 
-        string message = $"Your complaint #{complaintId} status changed from {oldStatus} to {newStatus}.";
+        string message =
+            $"Your complaint #{complaintId} is now {Describe(newStatus!)} (was {Describe(oldStatus)}).";
 
         await _repository.AddNotificationAsync(
             Guid.NewGuid(),
@@ -178,7 +183,17 @@ public class StaffComplaintService : IStaffComplaintService
             Timestamp = nowUtc
         };
 
-        await _notificationPublisher.PublishStatusChangeNotificationAsync(notificationEvent);
+        try
+        {
+            await _notificationPublisher.PublishStatusChangeNotificationAsync(notificationEvent);
+        }
+        catch (Exception exception)
+        {
+            // The status change and the notification row are already saved.
+            _logger?.LogWarning(exception,
+                "Unable to publish status change for complaint {ComplaintId}.",
+                existing.ComplaintId);
+        }
 
         return ToResponse(await GetExistingAsync(complaintId));
     }
@@ -298,6 +313,14 @@ public class StaffComplaintService : IStaffComplaintService
     }
 
     // ================= NEW FOR HMS-56 (end) =================
+
+    private static string Describe(string status) => status switch
+    {
+        ComplaintStatuses.Open => "open",
+        ComplaintStatuses.InProgress => "in progress",
+        ComplaintStatuses.Resolved => "resolved",
+        _ => status.ToLowerInvariant()
+    };
 
     private async Task<Complaint> GetExistingAsync(ulong complaintId)
     {

@@ -27,7 +27,8 @@ public class KafkaNotificationPublisher : INotificationPublisher, IDisposable
         {
             BootstrapServers = bootstrapServers,
             Acks = Acks.All,
-            EnableDeliveryReports = true
+            EnableDeliveryReports = true,
+            MessageTimeoutMs = 5000
         };
 
         _producer = new ProducerBuilder<string, string>(config).Build();

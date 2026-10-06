@@ -1,13 +1,10 @@
 import { useState } from "react";
 import RoleLandingPage from "./RoleLandingPage.jsx";
-import StudentProfilePage from
-  "./StudentProfilePage.jsx";
+import StudentProfilePage from "./StudentProfilePage.jsx";
 import StudentLeavePage from "./StudentLeavePage.jsx";
 import StaffLeavePage from "./StaffLeavePage.jsx";
-import hostelBackground from
-  "./assets/hostel-night-login-background.png";
-import AdminUsersPage from
-  "./AdminUsersPage.jsx";
+import hostelBackground from "./assets/hostel-night-login-background.png";
+import AdminUsersPage from "./AdminUsersPage.jsx";
 import RoomsPage from "./RoomsPage.jsx";
 import AllocationsPage from "./AllocationsPage.jsx";
 import StudentComplaintsPage from "./StudentComplaintsPage.jsx";
@@ -116,6 +113,7 @@ function LoginPage() {
       );
       sessionStorage.setItem("userRole", normalizedRole);
       sessionStorage.setItem("username", data.username);
+      sessionStorage.setItem("userId", String(data.userId));
 
       window.location.assign(landingPage);
     } catch {
@@ -129,158 +127,158 @@ function LoginPage() {
   }
 
   return (
-      <main className="login-page">
-        <section className="login-shell">
-          <aside
-            className="login-visual"
-            style={{
-              backgroundImage: `url(${hostelBackground})`
-            }}
-          >
-            <div className="visual-overlay" />
+    <main className="login-page">
+      <section className="login-shell">
+        <aside
+          className="login-visual"
+          style={{
+            backgroundImage: `url(${hostelBackground})`
+          }}
+        >
+          <div className="visual-overlay" />
 
-            <div className="visual-content">
-              <div className="visual-brand">
-                <span className="visual-logo">HMS</span>
+          <div className="visual-content">
+            <div className="visual-brand">
+              <span className="visual-logo">HMS</span>
 
-                <div>
-                  <strong>Hostel Management System</strong>
-                  <span>Secure student accommodation</span>
-                </div>
+              <div>
+                <strong>Hostel Management System</strong>
+                <span>Secure student accommodation</span>
               </div>
-
-              <div className="visual-message">
-                <p>WELCOME TO YOUR HOSTEL PORTAL</p>
-                <h2>Manage your hostel life securely and easily.</h2>
-                <span>
-                  Access your profile, accommodation details,
-                  requests and other permitted services.
-                </span>
-              </div>
-
-              <p className="visual-footer">
-                Secure access for students, wardens, hostel
-                masters and administrators.
-              </p>
-            </div>
-          </aside>
-
-          <section className="login-panel">
-            <div className="mobile-brand">
-              <span className="mobile-logo">HMS</span>
-              <strong>Hostel Management System</strong>
             </div>
 
-            <div className="login-heading">
-              <p>WELCOME BACK</p>
-              <h1>Sign in to your account</h1>
+            <div className="visual-message">
+              <p>WELCOME TO YOUR HOSTEL PORTAL</p>
+              <h2>Manage your hostel life securely and easily.</h2>
               <span>
-                Enter your registered email address or username
-                and password.
+                Access your profile, accommodation details,
+                requests and other permitted services.
               </span>
             </div>
 
-            {serverMessage && (
-              <div
-                className={`message ${messageType}`}
-                role="alert"
-              >
-                {serverMessage}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} noValidate>
-              <div className="form-group">
-                <label htmlFor="identifier">
-                  Email address or username
-                </label>
-
-                <input
-                  id="identifier"
-                  name="identifier"
-                  type="text"
-                  autoComplete="username"
-                  value={identifier}
-                  aria-invalid={Boolean(errors.identifier)}
-                  aria-describedby={
-                    errors.identifier
-                      ? "identifier-error"
-                      : undefined
-                  }
-                  onChange={(event) => {
-                    setIdentifier(event.target.value);
-
-                    if (errors.identifier) {
-                      setErrors((current) => ({
-                        ...current,
-                        identifier: ""
-                      }));
-                    }
-                  }}
-                  placeholder="Enter your email or username"
-                />
-
-                {errors.identifier && (
-                  <p
-                    id="identifier-error"
-                    className="field-error"
-                  >
-                    {errors.identifier}
-                  </p>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="password">Password</label>
-
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  aria-invalid={Boolean(errors.password)}
-                  aria-describedby={
-                    errors.password
-                      ? "password-error"
-                      : undefined
-                  }
-                  onChange={(event) => {
-                    setPassword(event.target.value);
-
-                    if (errors.password) {
-                      setErrors((current) => ({
-                        ...current,
-                        password: ""
-                      }));
-                    }
-                  }}
-                  placeholder="Enter your password"
-                />
-
-                {errors.password && (
-                  <p
-                    id="password-error"
-                    className="field-error"
-                  >
-                    {errors.password}
-                  </p>
-                )}
-              </div>
-
-              <button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Signing in..." : "Sign in"}
-              </button>
-            </form>
-
-            <p className="security-note">
-              Your account will be temporarily locked after five
-              consecutive failed login attempts.
+            <p className="visual-footer">
+              Secure access for students, wardens, hostel
+              masters and administrators.
             </p>
-          </section>
+          </div>
+        </aside>
+
+        <section className="login-panel">
+          <div className="mobile-brand">
+            <span className="mobile-logo">HMS</span>
+            <strong>Hostel Management System</strong>
+          </div>
+
+          <div className="login-heading">
+            <p>WELCOME BACK</p>
+            <h1>Sign in to your account</h1>
+            <span>
+              Enter your registered email address or username
+              and password.
+            </span>
+          </div>
+
+          {serverMessage && (
+            <div
+              className={`message ${messageType}`}
+              role="alert"
+            >
+              {serverMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} noValidate>
+            <div className="form-group">
+              <label htmlFor="identifier">
+                Email address or username
+              </label>
+
+              <input
+                id="identifier"
+                name="identifier"
+                type="text"
+                autoComplete="username"
+                value={identifier}
+                aria-invalid={Boolean(errors.identifier)}
+                aria-describedby={
+                  errors.identifier
+                    ? "identifier-error"
+                    : undefined
+                }
+                onChange={(event) => {
+                  setIdentifier(event.target.value);
+
+                  if (errors.identifier) {
+                    setErrors((current) => ({
+                      ...current,
+                      identifier: ""
+                    }));
+                  }
+                }}
+                placeholder="Enter your email or username"
+              />
+
+              {errors.identifier && (
+                <p
+                  id="identifier-error"
+                  className="field-error"
+                >
+                  {errors.identifier}
+                </p>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={
+                  errors.password
+                    ? "password-error"
+                    : undefined
+                }
+                onChange={(event) => {
+                  setPassword(event.target.value);
+
+                  if (errors.password) {
+                    setErrors((current) => ({
+                      ...current,
+                      password: ""
+                    }));
+                  }
+                }}
+                placeholder="Enter your password"
+              />
+
+              {errors.password && (
+                <p
+                  id="password-error"
+                  className="field-error"
+                >
+                  {errors.password}
+                </p>
+              )}
+            </div>
+
+            <button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Signing in..." : "Sign in"}
+            </button>
+          </form>
+
+          <p className="security-note">
+            Your account will be temporarily locked after five
+            consecutive failed login attempts.
+          </p>
         </section>
-      </main>
-    );
+      </section>
+    </main>
+  );
 }
 
 function App() {
@@ -327,7 +325,7 @@ function App() {
     return <AllocationsPage />;
   }
 
-    if (
+  if (
     window.location.pathname ===
     "/student/complaints"
   ) {

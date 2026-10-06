@@ -141,6 +141,14 @@ export function submitComplaint(complaint) {
   );
 }
 
+export function markNotificationRead(notificationId) {
+  return sendComplaintRequest(
+    `/api/student/complaints/notifications/${notificationId}/read`,
+    { method: "PUT" },
+    studentMessage
+  );
+}
+
 /* ---------- Staff (HMS-58) ---------- */
 
 const staffMessage =

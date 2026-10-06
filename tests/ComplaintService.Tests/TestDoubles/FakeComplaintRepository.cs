@@ -21,6 +21,22 @@ internal sealed class FakeComplaintRepository : IComplaintRepository
 
     public List<AuditEntry> AuditEntries { get; } = new();
 
+    public List<(ulong NotificationId, ulong StudentUserId)> ReadMarks { get; } = new();
+
+    public bool NotificationExists { get; set; } = true;
+
+    public Task<bool> MarkNotificationReadAsync(
+        ulong notificationId, ulong studentUserId, DateTime readAtUtc)
+    {
+        if (!NotificationExists)
+        {
+            return Task.FromResult(false);
+        }
+
+        ReadMarks.Add((notificationId, studentUserId));
+        return Task.FromResult(true);
+    }
+    
     public int CreateCallCount { get; private set; }
 
     public NewComplaint? LastNewComplaint { get; private set; }

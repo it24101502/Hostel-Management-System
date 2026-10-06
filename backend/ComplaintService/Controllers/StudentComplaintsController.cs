@@ -130,4 +130,27 @@ public class StudentComplaintsController : ControllerBase
             Message = "The authenticated student ID is missing or invalid."
         };
     }
+
+    [HttpPut("notifications/{notificationId:long}/read")]
+    public async Task<IActionResult> MarkNotificationRead(ulong notificationId)
+    {
+        if (!TryGetAuthenticatedUserId(out ulong studentUserId))
+        {
+            return Unauthorized(CreateUserIdError());
+        }
+
+        bool found = await _complaintService.MarkNotificationReadAsync(
+            notificationId,
+            studentUserId);
+
+        if (!found)
+        {
+            return NotFound(new ErrorResponse
+            {
+                Message = "The notification was not found."
+            });
+        }
+
+        return NoContent();
+    }
 }

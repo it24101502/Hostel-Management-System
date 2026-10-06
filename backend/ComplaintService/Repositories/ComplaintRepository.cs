@@ -386,6 +386,46 @@ public class ComplaintRepository : IComplaintRepository
         return notifications;
     }
 
+    public async Task<bool> MarkNotificationReadAsync(
+        ulong notificationId,
+        ulong studentUserId,
+        DateTime readAtUtc)
+    {
+        const string updateQuery = """
+            UPDATE complaint_notifications
+            SET is_read = TRUE,
+                read_at = @readAt
+            WHERE notification_id = @notificationId
+            AND recipient_user_id = @studentUserId
+            AND is_read = FALSE;
+            """;
+
+        const string existsQuery = """
+            SELECT 1
+            FROM complaint_notifications
+            WHERE notification_id = @notificationId
+            AND recipient_user_id = @studentUserId
+            LIMIT 1;
+            """;
+
+        await using var connection = new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using (var update = new MySqlCommand(updateQuery, connection))
+        {
+            update.Parameters.AddWithValue("@readAt", readAtUtc);
+            update.Parameters.AddWithValue("@notificationId", notificationId);
+            update.Parameters.AddWithValue("@studentUserId", studentUserId);
+            await update.ExecuteNonQueryAsync();
+        }
+
+        await using var exists = new MySqlCommand(existsQuery, connection);
+        exists.Parameters.AddWithValue("@notificationId", notificationId);
+        exists.Parameters.AddWithValue("@studentUserId", studentUserId);
+
+        return await exists.ExecuteScalarAsync() is not null;
+    }
+
     private static async Task<ulong> InsertComplaintAsync(
         MySqlConnection connection,
         MySqlTransaction transaction,

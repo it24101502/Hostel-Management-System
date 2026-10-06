@@ -185,4 +185,23 @@ public class ComplaintTriageTests
             () => CreateService(new FakeComplaintRepository())
                 .GetComplaintsAsync("nonsense", null));
     }
+
+    [Fact]
+    public async Task ChangeStatus_WhenPublisherFails_StillReturnsUpdatedComplaint()
+    {
+        var repository = new FakeComplaintRepository();
+        var complaint = repository.Seed(7);
+
+        var publisher = Substitute.For<INotificationPublisher>();
+        publisher.PublishStatusChangeNotificationAsync(
+                Arg.Any<ComplaintStatusChangedEvent>())
+            .Returns(Task.FromException(new InvalidOperationException("Kafka is down.")));
+
+        var result = await CreateService(repository, publisher).ChangeStatusAsync(
+            complaint.ComplaintId,
+            new UpdateComplaintStatusRequest { Status = "IN_PROGRESS" },
+            20, ComplaintRoles.Warden);
+
+        Assert.Equal(ComplaintStatuses.InProgress, result.Status);
+    }
 }

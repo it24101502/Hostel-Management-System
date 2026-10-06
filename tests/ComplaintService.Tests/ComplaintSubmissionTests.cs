@@ -155,4 +155,25 @@ public class ComplaintSubmissionTests
         return await Assert.ThrowsAsync<ComplaintValidationException>(
             () => service.SubmitAsync(request, 7, "student7"));
     }
+
+    [Fact]
+    public async Task MarkNotificationReadAsync_ForOwnNotification_ReturnsTrueAndRecordsIt()
+    {
+        var repository = new FakeComplaintRepository();
+        var service = CreateService(repository);
+
+        bool found = await service.MarkNotificationReadAsync(5, studentUserId: 7);
+
+        Assert.True(found);
+        Assert.Equal((5UL, 7UL), Assert.Single(repository.ReadMarks));
+    }
+
+    [Fact]
+    public async Task MarkNotificationReadAsync_ForMissingOrForeignNotification_ReturnsFalse()
+    {
+        var repository = new FakeComplaintRepository { NotificationExists = false };
+        var service = CreateService(repository);
+
+        Assert.False(await service.MarkNotificationReadAsync(404, studentUserId: 7));
+    }
 }

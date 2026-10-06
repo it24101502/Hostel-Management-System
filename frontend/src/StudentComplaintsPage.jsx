@@ -7,7 +7,8 @@ import ComplaintForm from "./ComplaintForm.jsx";
 import {
   ComplaintApiError,
   getMyComplaints,
-  getMyNotifications
+  getMyNotifications,
+  markNotificationRead
 } from "./complaintApi.js";
 
 import {
@@ -21,19 +22,15 @@ const REFRESH_INTERVAL_MS = 15000;
 
 function StudentComplaintsPage() {
   const [complaints, setComplaints] = useState([]);
-  const [notifications, setNotifications] =
-    useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [errorMessage, setErrorMessage] =
-    useState("");
-  const [successMessage, setSuccessMessage] =
-    useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
-    const accessToken =
-      sessionStorage.getItem("accessToken");
+    const accessToken = sessionStorage.getItem("accessToken");
     const role = sessionStorage.getItem("userRole");
 
     if (!accessToken || role !== "STUDENT") {
@@ -82,6 +79,23 @@ function StudentComplaintsPage() {
     }
   }
 
+  async function handleMarkRead(item) {
+    try {
+      await markNotificationRead(item.notificationId);
+      setNotifications((current) =>
+        current.filter(
+          (n) => n.notificationId !== item.notificationId
+        )
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof ComplaintApiError && error.status !== 401
+          ? error.message
+          : "Unable to mark the update as read."
+      );
+    }
+  }
+
   function handleSaved(saved, message) {
     setShowForm(false);
     setErrorMessage("");
@@ -108,6 +122,10 @@ function StudentComplaintsPage() {
       ).length
     }),
     [complaints]
+  );
+
+  const unreadNotifications = notifications.filter(
+    (item) => !item.isRead
   );
 
   return (
@@ -173,19 +191,19 @@ function StudentComplaintsPage() {
             />
           )}
 
-          {notifications.length > 0 && (
+          {unreadNotifications.length > 0 && (
             <section className="admin-users-card leave-alerts">
               <div className="admin-users-toolbar">
                 <div>
                   <h2>Updates</h2>
                   <span>
-                    Latest changes to your complaints
+                    {unreadNotifications.length} unread
                   </span>
                 </div>
               </div>
 
               <ul className="leave-alert-list">
-                {notifications.slice(0, 5).map((item) => (
+                {unreadNotifications.slice(0, 5).map((item) => (
                   <li
                     key={item.notificationId}
                     className="leave-alert"
@@ -196,6 +214,13 @@ function StudentComplaintsPage() {
                         {formatDateTime(item.createdAt)}
                       </small>
                     </div>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => handleMarkRead(item)}
+                    >
+                      Mark as read
+                    </button>
                   </li>
                 ))}
               </ul>

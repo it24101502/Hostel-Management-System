@@ -55,4 +55,14 @@ public interface IComplaintRepository
         DateTime createdAtUtc);
 
     Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(ulong studentId);
+
+    /// <summary>
+    /// Marks one of the student's own notifications as read.
+    /// Returns false if it doesn't exist or belongs to someone else.
+    /// Marking an already-read notification is not an error.
+    /// </summary>
+    Task<bool> MarkNotificationReadAsync(
+        ulong notificationId,
+        ulong studentUserId,
+        DateTime readAtUtc);
 }

@@ -93,6 +93,16 @@ public class StudentComplaintService : IStudentComplaintService
         return await _repository.GetNotificationsByStudentIdAsync(studentId);
     }
 
+    public Task<bool> MarkNotificationReadAsync(
+        ulong notificationId,
+        ulong studentUserId)
+    {
+        return _repository.MarkNotificationReadAsync(
+            notificationId,
+            studentUserId,
+            _timeProvider.GetUtcNow().UtcDateTime);
+    }
+
     private static string? Normalise(string? value)
     {
         return string.IsNullOrWhiteSpace(value)
