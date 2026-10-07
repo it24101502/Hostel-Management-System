@@ -1,18 +1,39 @@
 using System.Security.Claims;
 using System.Text;
-using NoticeService.Middleware;
-using NoticeService.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using NoticeService.Jobs;
+using NoticeService.Middleware;
+using NoticeService.Options;
 using NoticeService.Repositories;
+using NoticeService.Services;
+using Quartz;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+// Register Scoped Services (NoticeRepository, IDateTimeProvider, and Quartz jobs share Scoped lifetime)
+builder.Services.AddScoped<IDateTimeProvider, SystemDateTimeProvider>();
 builder.Services.AddScoped<INoticeRepository, NoticeRepository>();
+
+// Configure Quartz Scheduled Background Services
+builder.Services.AddQuartz(q =>
+{
+    var jobKey = new JobKey("NoticeArchivalJob");
+
+    q.AddJob<NoticeArchivalJob>(opts => opts.WithIdentity(jobKey));
+
+    // Scheduled to run every night at 00:00:00 (Midnight)
+    q.AddTrigger(opts => opts
+        .ForJob(jobKey)
+        .WithIdentity("NoticeArchivalJob-trigger")
+        .WithCronSchedule("0 0 0 * * ?"));
+});
+
+builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -88,7 +109,6 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
-
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 var app = builder.Build();

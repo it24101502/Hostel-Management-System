@@ -221,4 +221,39 @@ public class NoticeRepository : INoticeRepository
         using var connection = CreateConnection();
         return await connection.QueryAsync<NoticeResponse>(sql, new { HostelBlockId = hostelBlockId });
     }
+
+    public async Task<int> ArchiveExpiredNoticesAsync(DateOnly currentDate)
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        const string archiveSql = @"
+            UPDATE notices
+            SET 
+                is_archived = TRUE,
+                archived_at = CURRENT_TIMESTAMP()
+            WHERE is_archived = FALSE
+              AND expiry_date < @CurrentDate;";
+
+        var archivedCount = await connection.ExecuteAsync(archiveSql, new { CurrentDate = currentDate }, transaction);
+
+        if (archivedCount > 0)
+        {
+            const string auditSql = @"
+                INSERT INTO notice_audit_logs (
+                    notice_id, actor_user_id, actor_role, action, title
+                )
+                SELECT 
+                    notice_id, 0, 'SYSTEM_JOB', 'ARCHIVE', CONCAT('Auto-archived on expiry date check: ', title)
+                FROM notices
+                WHERE is_archived = TRUE 
+                  AND DATE(archived_at) = CURRENT_DATE();";
+
+            await connection.ExecuteAsync(auditSql, transaction: transaction);
+        }
+
+        transaction.Commit();
+        return archivedCount;
+    }
 }

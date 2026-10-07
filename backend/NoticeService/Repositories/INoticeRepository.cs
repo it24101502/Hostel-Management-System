@@ -10,4 +10,5 @@ public interface INoticeRepository
     Task<IEnumerable<NoticeResponse>> GetStudentNoticesAsync(ulong hostelBlockId);
     Task<bool> UpdateAsync(ulong noticeId, UpdateNoticeRequest request, ulong userId, string userRole);
     Task<bool> DeleteAsync(ulong noticeId, ulong userId, string userRole);
+    Task<int> ArchiveExpiredNoticesAsync(DateOnly currentDate);
 }
