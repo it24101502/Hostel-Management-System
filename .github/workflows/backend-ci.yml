@@ -553,6 +553,73 @@ jobs:
           echo "Complaint status default: $COMPLAINT_STATUS_DEFAULT"
           test "$COMPLAINT_STATUS_DEFAULT" = "OPEN"
 
+      - name: Verify expected notice database tables
+        run: |
+          TABLE_COUNT=$(mysql \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root \
+            --password="$MYSQL_ROOT_PASSWORD" \
+            --batch \
+            --skip-column-names \
+            --execute="
+              SELECT COUNT(*)
+              FROM information_schema.tables
+              WHERE LOWER(table_schema) = LOWER('Hostel_Notice_System')
+                AND table_name IN ('notices', 'notice_audit_logs');
+            ")
+
+          echo "Expected 2 notice tables; found $TABLE_COUNT."
+          test "$TABLE_COUNT" -eq 2
+
+      - name: Verify notice archive and student filtering with sample data
+        run: |
+          MYSQL="mysql --host=127.0.0.1 --port=3306 --user=root --password=$MYSQL_ROOT_PASSWORD --batch --skip-column-names"
+          $MYSQL < database/tests/notice_sample_data.sql
+          # Same statements the repository runs when archiving.
+          $MYSQL --database=Hostel_Notice_System --execute="
+            START TRANSACTION;
+            INSERT INTO notice_audit_logs
+                (notice_id, actor_user_id, actor_role, action, title)
+            SELECT notice_id, NULL, 'SYSTEM', 'ARCHIVE', title
+            FROM notices
+            WHERE is_archived = FALSE
+              AND expiry_date < UTC_DATE()
+              AND title LIKE 'CI %';
+            UPDATE notices
+            SET is_archived = TRUE, archived_at = UTC_TIMESTAMP(6)
+            WHERE is_archived = FALSE
+              AND expiry_date < UTC_DATE()
+              AND title LIKE 'CI %';
+            COMMIT;
+          "
+          ARCHIVED=$($MYSQL --database=Hostel_Notice_System --execute="
+            SELECT COUNT(*) FROM notices
+            WHERE title LIKE 'CI %' AND is_archived = TRUE;")
+          AUDITED=$($MYSQL --database=Hostel_Notice_System --execute="
+            SELECT COUNT(*) FROM notice_audit_logs
+            WHERE action = 'ARCHIVE' AND actor_role = 'SYSTEM'
+              AND actor_user_id IS NULL AND title LIKE 'CI %';")
+          # Same filter as GetStudentNoticesAsync, for block 7.
+          BLOCK7=$($MYSQL --database=Hostel_Notice_System --execute="
+            SELECT COUNT(*) FROM notices
+            WHERE title LIKE 'CI %'
+              AND is_archived = FALSE
+              AND expiry_date >= UTC_DATE()
+              AND (hostel_block_id = 7 OR hostel_block_id IS NULL);")
+          echo "Archived=$ARCHIVED Audited=$AUDITED Block7Visible=$BLOCK7"
+          test "$ARCHIVED" = "1"
+          test "$AUDITED" = "1"
+          test "$BLOCK7" = "2"
+          # The old role value must be rejected by the CHECK constraint.
+          if $MYSQL --database=Hostel_Notice_System --execute="
+            INSERT INTO notice_audit_logs
+                (notice_id, actor_user_id, actor_role, action, title)
+            VALUES (1, 0, 'SYSTEM_JOB', 'ARCHIVE', 'must fail');" 2>/dev/null; then
+            echo "SYSTEM_JOB was accepted, but the constraint should reject it."
+            exit 1
+          fi
+
   package:
     runs-on: ubuntu-latest
     needs: migrate
@@ -613,6 +680,13 @@ jobs:
           docker build
           --file backend/ComplaintService/Dockerfile
           --tag hostel-complaint-service:ci
+          .
+
+      - name: Build notice service Docker image
+        run: >
+          docker build
+          --file backend/NoticeService/Dockerfile
+          --tag hostel-notice-service:ci
           .
 
   deploy:

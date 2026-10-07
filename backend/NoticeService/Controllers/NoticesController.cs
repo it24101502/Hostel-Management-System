@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,14 +31,19 @@ public class NoticesController : ControllerBase
         return CreatedAtAction(nameof(GetNoticeById), new { id = notice.NoticeId }, notice);
     }
 
+    // Staff only: this list can include other blocks and archived items.
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<NoticeResponse>>> GetAllNotices([FromQuery] bool includeArchived = false)
+    [Authorize(Roles = "WARDEN,HOSTEL_MASTER,ADMIN")]
+    public async Task<ActionResult<IEnumerable<NoticeResponse>>> GetAllNotices(
+        [FromQuery] bool includeArchived = false)
     {
         var notices = await _noticeRepository.GetAllAsync(includeArchived);
         return Ok(notices);
     }
 
-    [HttpGet("{id:ulong}")]
+    // Staff only: students use the block-filtered endpoint below.
+    [HttpGet("{id:long}")]
+    [Authorize(Roles = "WARDEN,HOSTEL_MASTER,ADMIN")]
     public async Task<IActionResult> GetNoticeById(ulong id)
     {
         var notice = await _noticeRepository.GetByIdAsync(id);
@@ -48,11 +54,32 @@ public class NoticesController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieves active, non-expired notices and schedules relevant to a student's hostel block,
-    /// including general notices (where hostel_block_id is NULL). (HMS-61)
+    /// The signed-in student's own notices: their block's plus general ones.
+    /// The block comes from the JWT claim, so a student cannot request another block.
+    /// A student with no block assigned sees only general notices (hostel_block_id IS NULL).
     /// </summary>
-    [HttpGet("student/{hostelBlockId:ulong}")]
-    [Authorize(Roles = "STUDENT,WARDEN,HOSTEL_MASTER,ADMIN")]
+    [HttpGet("my")]
+    [Authorize(Roles = "STUDENT")]
+    public async Task<ActionResult<IEnumerable<NoticeResponse>>> GetMyNotices()
+    {
+        // Block 0 matches no specific block ID, so the query returns only
+        // general notices (hostel_block_id IS NULL).
+        ulong blockId = 0;
+        string? claimValue = User.FindFirst("hostel_block_id")?.Value;
+        if (claimValue is not null && ulong.TryParse(claimValue, out ulong parsed))
+        {
+            blockId = parsed;
+        }
+
+        var notices = await _noticeRepository.GetStudentNoticesAsync(blockId);
+        return Ok(notices);
+    }
+
+    /// <summary>
+    /// Staff preview of what students in a given block see. (HMS-61)
+    /// </summary>
+    [HttpGet("student/{hostelBlockId:long}")]
+    [Authorize(Roles = "WARDEN,HOSTEL_MASTER,ADMIN")]
     public async Task<ActionResult<IEnumerable<NoticeResponse>>> GetStudentNotices(ulong hostelBlockId)
     {
         if (hostelBlockId == 0)
@@ -64,7 +91,7 @@ public class NoticesController : ControllerBase
         return Ok(notices);
     }
 
-    [HttpPut("{id:ulong}")]
+    [HttpPut("{id:long}")]
     [Authorize(Roles = "WARDEN,HOSTEL_MASTER,ADMIN")]
     public async Task<IActionResult> UpdateNotice(ulong id, [FromBody] UpdateNoticeRequest request)
     {
@@ -80,7 +107,7 @@ public class NoticesController : ControllerBase
         return Ok(updatedNotice);
     }
 
-    [HttpDelete("{id:ulong}")]
+    [HttpDelete("{id:long}")]
     [Authorize(Roles = "WARDEN,HOSTEL_MASTER,ADMIN")]
     public async Task<IActionResult> DeleteNotice(ulong id)
     {
@@ -97,11 +124,16 @@ public class NoticesController : ControllerBase
 
     private (ulong? UserId, string? Role) GetActorDetails()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+        // IdentityService puts the user ID in the "sub" claim. With
+        // MapInboundClaims = false it is not renamed to NameIdentifier.
+        string? userIdClaim =
+            User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        string? roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
 
         if (ulong.TryParse(userIdClaim, out var userId) && !string.IsNullOrEmpty(roleClaim))
-            return (userId, roleClaim.ToUpper());
+            return (userId, roleClaim.ToUpperInvariant());
 
         return (null, null);
     }

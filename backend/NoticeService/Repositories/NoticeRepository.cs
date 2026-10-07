@@ -7,6 +7,19 @@ namespace NoticeService.Repositories;
 
 public class NoticeRepository : INoticeRepository
 {
+    private const string SelectColumns = @"
+        notice_id AS NoticeId,
+        title AS Title,
+        content AS Content,
+        notice_type AS NoticeType,
+        hostel_block_id AS HostelBlockId,
+        expiry_date AS ExpiryDate,
+        is_archived AS IsArchived,
+        archived_at AS ArchivedAt,
+        created_by_user_id AS CreatedByUserId,
+        created_at AS CreatedAt,
+        updated_at AS UpdatedAt";
+
     private readonly string _connectionString;
 
     public NoticeRepository(IConfiguration configuration)
@@ -41,20 +54,8 @@ public class NoticeRepository : INoticeRepository
             CreatedByUserId = userId
         }, transaction);
 
-        const string insertAuditSql = @"
-            INSERT INTO notice_audit_logs (
-                notice_id, actor_user_id, actor_role, action, title
-            ) VALUES (
-                @NoticeId, @ActorUserId, UPPER(@ActorRole), 'PUBLISH', @Title
-            );";
-
-        await connection.ExecuteAsync(insertAuditSql, new
-        {
-            NoticeId = noticeId,
-            ActorUserId = userId,
-            ActorRole = userRole,
-            Title = request.Title.Trim()
-        }, transaction);
+        await InsertAuditAsync(
+            connection, transaction, noticeId, userId, userRole, "PUBLISH", request.Title.Trim());
 
         transaction.Commit();
 
@@ -63,19 +64,8 @@ public class NoticeRepository : INoticeRepository
 
     public async Task<NoticeResponse?> GetByIdAsync(ulong noticeId)
     {
-        const string sql = @"
-            SELECT
-                notice_id AS NoticeId,
-                title AS Title,
-                content AS Content,
-                notice_type AS NoticeType,
-                hostel_block_id AS HostelBlockId,
-                expiry_date AS ExpiryDate,
-                is_archived AS IsArchived,
-                archived_at AS ArchivedAt,
-                created_by_user_id AS CreatedByUserId,
-                created_at AS CreatedAt,
-                updated_at AS UpdatedAt
+        string sql = $@"
+            SELECT {SelectColumns}
             FROM notices
             WHERE notice_id = @NoticeId;";
 
@@ -85,20 +75,7 @@ public class NoticeRepository : INoticeRepository
 
     public async Task<IEnumerable<NoticeResponse>> GetAllAsync(bool includeArchived = false)
     {
-        string sql = @"
-            SELECT
-                notice_id AS NoticeId,
-                title AS Title,
-                content AS Content,
-                notice_type AS NoticeType,
-                hostel_block_id AS HostelBlockId,
-                expiry_date AS ExpiryDate,
-                is_archived AS IsArchived,
-                archived_at AS ArchivedAt,
-                created_by_user_id AS CreatedByUserId,
-                created_at AS CreatedAt,
-                updated_at AS UpdatedAt
-            FROM notices ";
+        string sql = $"SELECT {SelectColumns} FROM notices ";
 
         if (!includeArchived)
         {
@@ -139,23 +116,12 @@ public class NoticeRepository : INoticeRepository
 
         if (affectedRows == 0)
         {
+            transaction.Rollback();
             return false;
         }
 
-        const string insertAuditSql = @"
-            INSERT INTO notice_audit_logs (
-                notice_id, actor_user_id, actor_role, action, title
-            ) VALUES (
-                @NoticeId, @ActorUserId, UPPER(@ActorRole), 'UPDATE', @Title
-            );";
-
-        await connection.ExecuteAsync(insertAuditSql, new
-        {
-            NoticeId = noticeId,
-            ActorUserId = userId,
-            ActorRole = userRole,
-            Title = request.Title.Trim()
-        }, transaction);
+        await InsertAuditAsync(
+            connection, transaction, noticeId, userId, userRole, "UPDATE", request.Title.Trim());
 
         transaction.Commit();
         return true;
@@ -168,27 +134,17 @@ public class NoticeRepository : INoticeRepository
         using var transaction = connection.BeginTransaction();
 
         const string fetchNoticeSql = "SELECT title FROM notices WHERE notice_id = @NoticeId;";
-        var title = await connection.ExecuteScalarAsync<string?>(fetchNoticeSql, new { NoticeId = noticeId }, transaction);
+        var title = await connection.ExecuteScalarAsync<string?>(
+            fetchNoticeSql, new { NoticeId = noticeId }, transaction);
 
         if (title == null)
         {
+            transaction.Rollback();
             return false;
         }
 
-        const string insertAuditSql = @"
-            INSERT INTO notice_audit_logs (
-                notice_id, actor_user_id, actor_role, action, title
-            ) VALUES (
-                @NoticeId, @ActorUserId, UPPER(@ActorRole), 'DELETE', @Title
-            );";
-
-        await connection.ExecuteAsync(insertAuditSql, new
-        {
-            NoticeId = noticeId,
-            ActorUserId = userId,
-            ActorRole = userRole,
-            Title = title
-        }, transaction);
+        await InsertAuditAsync(
+            connection, transaction, noticeId, userId, userRole, "DELETE", title);
 
         const string deleteNoticeSql = "DELETE FROM notices WHERE notice_id = @NoticeId;";
         await connection.ExecuteAsync(deleteNoticeSql, new { NoticeId = noticeId }, transaction);
@@ -199,22 +155,11 @@ public class NoticeRepository : INoticeRepository
 
     public async Task<IEnumerable<NoticeResponse>> GetStudentNoticesAsync(ulong hostelBlockId)
     {
-        const string sql = @"
-            SELECT 
-                notice_id AS NoticeId,
-                title AS Title,
-                content AS Content,
-                notice_type AS NoticeType,
-                hostel_block_id AS HostelBlockId,
-                expiry_date AS ExpiryDate,
-                is_archived AS IsArchived,
-                archived_at AS ArchivedAt,
-                created_by_user_id AS CreatedByUserId,
-                created_at AS CreatedAt,
-                updated_at AS UpdatedAt
+        string sql = $@"
+            SELECT {SelectColumns}
             FROM notices
-            WHERE is_archived = FALSE 
-              AND expiry_date >= CURRENT_DATE()
+            WHERE is_archived = FALSE
+              AND expiry_date >= UTC_DATE()
               AND (hostel_block_id = @HostelBlockId OR hostel_block_id IS NULL)
             ORDER BY created_at DESC;";
 
@@ -228,32 +173,76 @@ public class NoticeRepository : INoticeRepository
         connection.Open();
         using var transaction = connection.BeginTransaction();
 
+        // Pick the notices first so the audit rows cover exactly
+        // the notices archived by this run, and no others.
+        const string selectSql = @"
+            SELECT notice_id AS NoticeId, title AS Title
+            FROM notices
+            WHERE is_archived = FALSE
+              AND expiry_date < @CurrentDate
+            FOR UPDATE;";
+
+        var expired = (await connection.QueryAsync<ExpiredNotice>(
+            selectSql, new { CurrentDate = currentDate }, transaction)).ToList();
+
+        if (expired.Count == 0)
+        {
+            transaction.Rollback();
+            return 0;
+        }
+
         const string archiveSql = @"
             UPDATE notices
-            SET 
-                is_archived = TRUE,
-                archived_at = CURRENT_TIMESTAMP()
+            SET is_archived = TRUE,
+                archived_at = UTC_TIMESTAMP(6)
             WHERE is_archived = FALSE
-              AND expiry_date < @CurrentDate;";
+              AND notice_id IN @Ids;";
 
-        var archivedCount = await connection.ExecuteAsync(archiveSql, new { CurrentDate = currentDate }, transaction);
+        int archivedCount = await connection.ExecuteAsync(
+            archiveSql,
+            new { Ids = expired.Select(n => n.NoticeId).ToArray() },
+            transaction);
 
-        if (archivedCount > 0)
-        {
-            const string auditSql = @"
-                INSERT INTO notice_audit_logs (
-                    notice_id, actor_user_id, actor_role, action, title
-                )
-                SELECT 
-                    notice_id, 0, 'SYSTEM_JOB', 'ARCHIVE', CONCAT('Auto-archived on expiry date check: ', title)
-                FROM notices
-                WHERE is_archived = TRUE 
-                  AND DATE(archived_at) = CURRENT_DATE();";
+        // The system acts here, so actor_user_id is NULL and the
+        // role is 'SYSTEM' (the only value the CHECK allows for it).
+        const string auditSql = @"
+            INSERT INTO notice_audit_logs (
+                notice_id, actor_user_id, actor_role, action, title
+            ) VALUES (
+                @NoticeId, NULL, 'SYSTEM', 'ARCHIVE', @Title
+            );";
 
-            await connection.ExecuteAsync(auditSql, transaction: transaction);
-        }
+        await connection.ExecuteAsync(auditSql, expired, transaction);
 
         transaction.Commit();
         return archivedCount;
     }
+
+    private static Task InsertAuditAsync(
+        IDbConnection connection,
+        IDbTransaction transaction,
+        ulong noticeId,
+        ulong userId,
+        string userRole,
+        string action,
+        string title)
+    {
+        const string sql = @"
+            INSERT INTO notice_audit_logs (
+                notice_id, actor_user_id, actor_role, action, title
+            ) VALUES (
+                @NoticeId, @ActorUserId, UPPER(@ActorRole), @Action, @Title
+            );";
+
+        return connection.ExecuteAsync(sql, new
+        {
+            NoticeId = noticeId,
+            ActorUserId = userId,
+            ActorRole = userRole,
+            Action = action,
+            Title = title
+        }, transaction);
+    }
+
+    private sealed record ExpiredNotice(ulong NoticeId, string Title);
 }

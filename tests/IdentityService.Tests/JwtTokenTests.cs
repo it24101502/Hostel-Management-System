@@ -216,4 +216,29 @@ public class JwtTokenTests
             return Task.CompletedTask;
         }
     }
+
+    [Fact]
+    public void Token_ForStudentWithBlock_ContainsHostelBlockClaim()
+    {
+        var jwtService = CreateJwtService();
+        var user = CreateUser("Student@123");
+        user.HostelBlockId = 3;
+
+        var principal = ValidateToken(
+            jwtService.CreateToken(user).AccessToken);
+
+        Assert.Equal(
+            "3",
+            principal.FindFirst("hostel_block_id")?.Value);
+    }
+
+    [Fact]
+    public void Token_ForUserWithoutBlock_HasNoHostelBlockClaim()
+    {
+        var jwtService = CreateJwtService();
+        var principal = ValidateToken(
+            jwtService.CreateToken(CreateUser("Student@123")).AccessToken);
+
+        Assert.Null(principal.FindFirst("hostel_block_id"));
+    }
 }

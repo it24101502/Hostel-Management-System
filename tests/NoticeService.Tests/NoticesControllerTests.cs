@@ -38,6 +38,28 @@ public class NoticesControllerTests
         };
     }
 
+    private void SetStudentContext(ulong userId, string? hostelBlockId)
+    {
+        var claims = new List<Claim>
+        {
+            new("sub", userId.ToString()),
+            new(ClaimTypes.Role, "STUDENT")
+        };
+
+        if (hostelBlockId is not null)
+        {
+            claims.Add(new Claim("hostel_block_id", hostelBlockId));
+        }
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"))
+            }
+        };
+    }
+
     [Fact]
     public async Task CreateNotice_ReturnsCreatedAtAction_WhenRequestIsValid()
     {
@@ -50,6 +72,31 @@ public class NoticesControllerTests
 
         var createdAtResult = Assert.IsType<CreatedAtActionResult>(result);
         Assert.Equal(201, createdAtResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateNotice_ReadsTheUserIdFromTheSubClaim()
+    {
+        var request = new CreateNoticeRequest("Title", "Body", "NOTICE", null,
+            DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)));
+        var response = new NoticeResponse(1, "Title", "Body", "NOTICE", null,
+            request.ExpiryDate, false, null, 10, DateTime.UtcNow, DateTime.UtcNow);
+
+        _mockRepository.Setup(r => r.CreateAsync(request, 10UL, "WARDEN")).ReturnsAsync(response);
+
+        // Same claims a real IdentityService token carries.
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    new[] { new Claim("sub", "10"), new Claim(ClaimTypes.Role, "WARDEN") },
+                    "TestAuth"))
+            }
+        };
+
+        var result = await _controller.CreateNotice(request);
+        Assert.IsType<CreatedAtActionResult>(result);
     }
 
     [Fact]
@@ -85,6 +132,36 @@ public class NoticesControllerTests
         var result = await _controller.DeleteNotice(1UL);
 
         Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task GetMyNotices_UsesTheBlockFromTheToken()
+    {
+        _mockRepository
+            .Setup(r => r.GetStudentNoticesAsync(2UL))
+            .ReturnsAsync(new List<NoticeResponse>());
+
+        SetStudentContext(201, "2");
+
+        var actionResult = await _controller.GetMyNotices();
+
+        Assert.IsType<OkObjectResult>(actionResult.Result);
+        _mockRepository.Verify(r => r.GetStudentNoticesAsync(2UL), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetMyNotices_WithoutABlockClaim_ReturnsOnlyGeneralNotices()
+    {
+        _mockRepository
+            .Setup(r => r.GetStudentNoticesAsync(0UL))
+            .ReturnsAsync(new List<NoticeResponse>());
+
+        SetStudentContext(201, null);
+
+        var actionResult = await _controller.GetMyNotices();
+
+        Assert.IsType<OkObjectResult>(actionResult.Result);
+        _mockRepository.Verify(r => r.GetStudentNoticesAsync(0UL), Times.Once);
     }
 
     [Fact]

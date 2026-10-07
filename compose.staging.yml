@@ -23,6 +23,12 @@ services:
     ports:
       - "8093:8080"
 
+  notice-api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+    ports:
+      - "8094:8080"
+
   frontend:
     build:
       args:

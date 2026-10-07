@@ -29,10 +29,13 @@ public class UserRepository : IUserRepository
                 u.lockout_end_at,
                 u.is_active,
                 r.role_name,
-                r.is_active AS role_is_active
+                r.is_active AS role_is_active,
+                sp.hostel_block_id
             FROM users AS u
             INNER JOIN roles AS r
                 ON r.role_id = u.role_id
+            LEFT JOIN student_profiles AS sp
+                ON sp.user_id = u.user_id
             WHERE u.normalized_email = @identifier
                OR u.normalized_username = @identifier
             LIMIT 1;
@@ -61,6 +64,9 @@ public class UserRepository : IUserRepository
         int lockoutOrdinal =
             reader.GetOrdinal("lockout_end_at");
 
+        int blockOrdinal =
+            reader.GetOrdinal("hostel_block_id");
+
         return new LoginUser
         {
             UserId = reader.GetUInt64("user_id"),
@@ -87,7 +93,12 @@ public class UserRepository : IUserRepository
                 reader.GetString("role_name"),
 
             IsRoleActive =
-                reader.GetBoolean("role_is_active")
+                reader.GetBoolean("role_is_active"),
+
+            HostelBlockId =
+                reader.IsDBNull(blockOrdinal)
+                    ? null
+                    : reader.GetUInt64(blockOrdinal)
         };
     }
 

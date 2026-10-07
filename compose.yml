@@ -33,6 +33,9 @@ services:
       - ./database/complaint/migrations/002_create_complaints.sql:/docker-entrypoint-initdb.d/302_create_complaints.sql:ro
       - ./database/complaint/migrations/003_create_complaint_audit_logs.sql:/docker-entrypoint-initdb.d/303_create_complaint_audit_logs.sql:ro
       - ./database/complaint/migrations/004_create_complaint_notifications.sql:/docker-entrypoint-initdb.d/304_create_complaint_notifications.sql:ro
+      - ./database/notice/migrations/001_create_notice_database.sql:/docker-entrypoint-initdb.d/401_create_notice_database.sql:ro
+      - ./database/notice/migrations/002_create_notices.sql:/docker-entrypoint-initdb.d/402_create_notices.sql:ro
+      - ./database/notice/migrations/003_create_notice_audit_logs.sql:/docker-entrypoint-initdb.d/403_create_notice_audit_logs.sql:ro
     healthcheck:
       test:
         [
@@ -194,6 +197,24 @@ services:
         condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
+
+  notice-api:
+    build:
+      context: .
+      dockerfile: backend/NoticeService/Dockerfile
+    image: hostel-notice-service:sprint4
+    container_name: hostel-notice-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      Jwt__Key: ${JWT_KEY}
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Notice_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
+    ports:
+      - "8084:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   frontend:
     build:

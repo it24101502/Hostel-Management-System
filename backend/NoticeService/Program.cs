@@ -1,5 +1,7 @@
+using System.Data;
 using System.Security.Claims;
 using System.Text;
+using Dapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -11,22 +13,24 @@ using NoticeService.Repositories;
 using NoticeService.Services;
 using Quartz;
 
+// MySQL DATE columns are read as DateTime. This lets Dapper map them
+// to and from DateOnly (used by the notice DTOs and the archive job).
+SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-// Register Scoped Services (NoticeRepository, IDateTimeProvider, and Quartz jobs share Scoped lifetime)
 builder.Services.AddScoped<IDateTimeProvider, SystemDateTimeProvider>();
 builder.Services.AddScoped<INoticeRepository, NoticeRepository>();
 
-// Configure Quartz Scheduled Background Services
 builder.Services.AddQuartz(q =>
 {
     var jobKey = new JobKey("NoticeArchivalJob");
 
     q.AddJob<NoticeArchivalJob>(opts => opts.WithIdentity(jobKey));
 
-    // Scheduled to run every night at 00:00:00 (Midnight)
+    // Every night at 00:00:00.
     q.AddTrigger(opts => opts
         .ForJob(jobKey)
         .WithIdentity("NoticeArchivalJob-trigger")
@@ -42,8 +46,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.Configure<JwtOptions>(
-    builder.Configuration.GetSection(
-        JwtOptions.SectionName));
+    builder.Configuration.GetSection(JwtOptions.SectionName));
 
 builder.Services.AddCors(options =>
 {
@@ -65,19 +68,16 @@ builder.Services.AddCors(options =>
 var jwtOptions = builder.Configuration
     .GetSection(JwtOptions.SectionName)
     .Get<JwtOptions>()
-    ?? throw new InvalidOperationException(
-        "JWT configuration is missing.");
+    ?? throw new InvalidOperationException("JWT configuration is missing.");
 
 if (string.IsNullOrWhiteSpace(jwtOptions.Key) ||
     jwtOptions.Key.Length < 32)
 {
-    throw new InvalidOperationException(
-        "A secure JWT signing key is required.");
+    throw new InvalidOperationException("A secure JWT signing key is required.");
 }
 
 builder.Services
-    .AddAuthentication(
-        JwtBearerDefaults.AuthenticationScheme)
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.MapInboundClaims = false;
@@ -86,11 +86,8 @@ builder.Services
             new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-
                 IssuerSigningKey =
-                    new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(
-                            jwtOptions.Key)),
+                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
 
                 ValidateIssuer = true,
                 ValidIssuer = jwtOptions.Issuer,
@@ -101,9 +98,7 @@ builder.Services
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero,
 
-                NameClaimType =
-                    JwtRegisteredClaimNames.UniqueName,
-
+                NameClaimType = JwtRegisteredClaimNames.UniqueName,
                 RoleClaimType = ClaimTypes.Role
             };
     });
@@ -127,3 +122,19 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+internal sealed class DateOnlyTypeHandler : SqlMapper.TypeHandler<DateOnly>
+{
+    public override void SetValue(IDbDataParameter parameter, DateOnly value)
+    {
+        parameter.DbType = DbType.Date;
+        parameter.Value = value.ToDateTime(TimeOnly.MinValue);
+    }
+
+    public override DateOnly Parse(object value) => value switch
+    {
+        DateOnly dateOnly => dateOnly,
+        DateTime dateTime => DateOnly.FromDateTime(dateTime),
+        _ => DateOnly.Parse(value.ToString()!)
+    };
+}

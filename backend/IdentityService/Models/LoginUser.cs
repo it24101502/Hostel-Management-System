@@ -21,4 +21,6 @@ public class LoginUser
     public string RoleName { get; set; } = string.Empty;
 
     public bool IsRoleActive { get; set; }
+
+    public ulong? HostelBlockId { get; set; }
 }
