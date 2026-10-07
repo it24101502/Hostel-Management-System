@@ -47,11 +47,19 @@ public class NoticesController : ControllerBase
         return Ok(notice);
     }
 
+    /// <summary>
+    /// Retrieves active, non-expired notices and schedules relevant to a student's hostel block,
+    /// including general notices (where hostel_block_id is NULL). (HMS-61)
+    /// </summary>
+    /// <param name="hostelBlockId">The hostel block ID assigned to the student.</param>
     [HttpGet("student/{hostelBlockId:ulong}")]
-    public async Task<IActionResult> GetStudentNotices(ulong hostelBlockId)
+    [Authorize(Roles = "STUDENT,WARDEN,HOSTEL_MASTER,ADMIN")]
+    public async Task<ActionResult<IEnumerable<NoticeResponse>>> GetStudentNotices(ulong hostelBlockId)
     {
         if (hostelBlockId == 0)
+        {
             return BadRequest(new { message = "Hostel block ID must be greater than zero." });
+        }
 
         var notices = await _noticeRepository.GetStudentNoticesAsync(hostelBlockId);
         return Ok(notices);

@@ -31,3 +31,13 @@ public record NoticeResponse(
     DateTime CreatedAt,
     DateTime UpdatedAt
 );
+
+public record StudentNoticeResponse(
+    ulong NoticeId,
+    string Title,
+    string Content,
+    string NoticeType,
+    ulong? HostelBlockId,
+    DateOnly ExpiryDate,
+    DateTime CreatedAt
+);
