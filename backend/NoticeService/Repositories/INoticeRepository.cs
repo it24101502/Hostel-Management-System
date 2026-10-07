@@ -1,6 +1,6 @@
-namespace NoticeService.Repositories;
-
 using NoticeService.DTOs;
+
+namespace NoticeService.Repositories;
 
 public interface INoticeRepository
 {

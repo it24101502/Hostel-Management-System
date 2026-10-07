@@ -51,7 +51,6 @@ public class NoticesController : ControllerBase
     /// Retrieves active, non-expired notices and schedules relevant to a student's hostel block,
     /// including general notices (where hostel_block_id is NULL). (HMS-61)
     /// </summary>
-    /// <param name="hostelBlockId">The hostel block ID assigned to the student.</param>
     [HttpGet("student/{hostelBlockId:ulong}")]
     [Authorize(Roles = "STUDENT,WARDEN,HOSTEL_MASTER,ADMIN")]
     public async Task<ActionResult<IEnumerable<NoticeResponse>>> GetStudentNotices(ulong hostelBlockId)

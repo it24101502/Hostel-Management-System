@@ -105,10 +105,10 @@ public class NoticesControllerTests
         SetUserContext(201, "STUDENT");
 
         // Act
-        var result = await _controller.GetStudentNotices(studentBlockId);
+        var actionResult = await _controller.GetStudentNotices(studentBlockId);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         Assert.Equal(200, okResult.StatusCode);
 
         var returnedNotices = Assert.IsAssignableFrom<IEnumerable<NoticeResponse>>(okResult.Value);
@@ -119,10 +119,10 @@ public class NoticesControllerTests
     public async Task GetStudentNotices_ReturnsBadRequest_WhenBlockIdIsZero()
     {
         // Act
-        var result = await _controller.GetStudentNotices(0);
+        var actionResult = await _controller.GetStudentNotices(0);
 
         // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
 
@@ -138,10 +138,10 @@ public class NoticesControllerTests
         SetUserContext(202, "STUDENT");
 
         // Act
-        var result = await _controller.GetStudentNotices(studentBlockId);
+        var actionResult = await _controller.GetStudentNotices(studentBlockId);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         var returnedNotices = Assert.IsAssignableFrom<IEnumerable<NoticeResponse>>(okResult.Value);
         Assert.Empty(returnedNotices);
     }
