@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NoticeService.Controllers;
 using NoticeService.DTOs;
-using NoticeService.Models;
 using NoticeService.Repositories;
 using Xunit;
 
@@ -91,7 +90,6 @@ public class NoticesControllerTests
     [Fact]
     public async Task GetStudentNotices_ReturnsOkWithFilteredNotices_WhenBlockIdIsValid()
     {
-        // Arrange
         ulong hostelBlockId = 1UL;
         var notices = new List<NoticeResponse>
         {
@@ -101,10 +99,8 @@ public class NoticesControllerTests
 
         _mockRepository.Setup(r => r.GetStudentNoticesAsync(hostelBlockId)).ReturnsAsync(notices);
 
-        // Act
         var result = await _controller.GetStudentNotices(hostelBlockId);
 
-        // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
         var returnedNotices = Assert.IsAssignableFrom<IEnumerable<NoticeResponse>>(okResult.Value);
@@ -114,11 +110,8 @@ public class NoticesControllerTests
     [Fact]
     public async Task GetStudentNotices_ReturnsBadRequest_WhenHostelBlockIdIsZero()
     {
-        // Act
         var result = await _controller.GetStudentNotices(0);
 
-        // Assert
         Assert.IsType<BadRequestObjectResult>(result);
     }
-
 }

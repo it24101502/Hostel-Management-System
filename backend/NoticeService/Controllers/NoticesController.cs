@@ -1,9 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NoticeService.Authorization;
 using NoticeService.DTOs;
-using NoticeService.Models;
 using NoticeService.Repositories;
 
 namespace NoticeService.Controllers;
@@ -20,52 +18,20 @@ public class NoticesController : ControllerBase
         _noticeRepository = noticeRepository;
     }
 
-    private bool TryGetUserInfo(out ulong userId, out string userRole)
-    {
-        userId = 0;
-        userRole = string.Empty;
-
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                       ?? User.FindFirst("sub")?.Value;
-
-        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value
-                     ?? User.FindFirst("role")?.Value;
-
-        if (!ulong.TryParse(userIdClaim, out userId) || string.IsNullOrWhiteSpace(roleClaim))
-        {
-            return false;
-        }
-
-        userRole = roleClaim.ToUpper();
-        return true;
-    }
-
     [HttpPost]
-    [RequireRole(NoticeRoles.Warden, NoticeRoles.HostelMaster, NoticeRoles.Admin)]
+    [Authorize(Roles = "WARDEN,HOSTEL_MASTER,ADMIN")]
     public async Task<IActionResult> CreateNotice([FromBody] CreateNoticeRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Content))
-        {
-            return BadRequest(new ErrorResponse { Message = "Title and Content cannot be empty." });
-        }
+        var (userId, userRole) = GetActorDetails();
+        if (!userId.HasValue || string.IsNullOrEmpty(userRole))
+            return Unauthorized(new { message = "Invalid user credentials in token." });
 
-        if (!NoticeTypes.All.Contains(request.NoticeType))
-        {
-            return BadRequest(new ErrorResponse { Message = "Invalid notice type. Allowed values are NOTICE and SCHEDULE." });
-        }
-
-        if (!TryGetUserInfo(out var userId, out var userRole))
-        {
-            return Unauthorized(new ErrorResponse { Message = "Invalid user claims." });
-        }
-
-        var createdNotice = await _noticeRepository.CreateAsync(request, userId, userRole);
-
-        return CreatedAtAction(nameof(GetNoticeById), new { id = createdNotice.NoticeId }, createdNotice);
+        var notice = await _noticeRepository.CreateAsync(request, userId.Value, userRole);
+        return CreatedAtAction(nameof(GetNoticeById), new { id = notice.NoticeId }, notice);
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllNotices([FromQuery] bool includeArchived = false)
+    public async Task<ActionResult<IEnumerable<NoticeResponse>>> GetAllNotices([FromQuery] bool includeArchived = false)
     {
         var notices = await _noticeRepository.GetAllAsync(includeArchived);
         return Ok(notices);
@@ -76,70 +42,60 @@ public class NoticesController : ControllerBase
     {
         var notice = await _noticeRepository.GetByIdAsync(id);
         if (notice == null)
-        {
-            return NotFound(new ErrorResponse { Message = $"Notice with ID {id} was not found." });
-        }
+            return NotFound(new { message = $"Notice {id} not found." });
 
         return Ok(notice);
     }
 
-    [HttpGet("student")]
-    [RequireRole(NoticeRoles.Student, NoticeRoles.Warden, NoticeRoles.HostelMaster, NoticeRoles.Admin)]
-    public async Task<IActionResult> GetStudentNotices([FromQuery] ulong hostelBlockId)
+    [HttpGet("student/{hostelBlockId:ulong}")]
+    public async Task<IActionResult> GetStudentNotices(ulong hostelBlockId)
     {
         if (hostelBlockId == 0)
-        {
-            return BadRequest(new ErrorResponse { Message = "Hostel block ID is required." });
-        }
+            return BadRequest(new { message = "Hostel block ID must be greater than zero." });
 
         var notices = await _noticeRepository.GetStudentNoticesAsync(hostelBlockId);
         return Ok(notices);
     }
 
     [HttpPut("{id:ulong}")]
-    [RequireRole(NoticeRoles.Warden, NoticeRoles.HostelMaster, NoticeRoles.Admin)]
+    [Authorize(Roles = "WARDEN,HOSTEL_MASTER,ADMIN")]
     public async Task<IActionResult> UpdateNotice(ulong id, [FromBody] UpdateNoticeRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Content))
-        {
-            return BadRequest(new ErrorResponse { Message = "Title and Content cannot be empty." });
-        }
+        var (userId, userRole) = GetActorDetails();
+        if (!userId.HasValue || string.IsNullOrEmpty(userRole))
+            return Unauthorized(new { message = "Invalid user credentials in token." });
 
-        if (!NoticeTypes.All.Contains(request.NoticeType))
-        {
-            return BadRequest(new ErrorResponse { Message = "Invalid notice type. Allowed values are NOTICE and SCHEDULE." });
-        }
-
-        if (!TryGetUserInfo(out var userId, out var userRole))
-        {
-            return Unauthorized(new ErrorResponse { Message = "Invalid user claims." });
-        }
-
-        var updated = await _noticeRepository.UpdateAsync(id, request, userId, userRole);
+        var updated = await _noticeRepository.UpdateAsync(id, request, userId.Value, userRole);
         if (!updated)
-        {
-            return NotFound(new ErrorResponse { Message = $"Notice with ID {id} was not found." });
-        }
+            return NotFound(new { message = $"Notice {id} not found." });
 
         var updatedNotice = await _noticeRepository.GetByIdAsync(id);
         return Ok(updatedNotice);
     }
 
     [HttpDelete("{id:ulong}")]
-    [RequireRole(NoticeRoles.Warden, NoticeRoles.HostelMaster, NoticeRoles.Admin)]
+    [Authorize(Roles = "WARDEN,HOSTEL_MASTER,ADMIN")]
     public async Task<IActionResult> DeleteNotice(ulong id)
     {
-        if (!TryGetUserInfo(out var userId, out var userRole))
-        {
-            return Unauthorized(new ErrorResponse { Message = "Invalid user claims." });
-        }
+        var (userId, userRole) = GetActorDetails();
+        if (!userId.HasValue || string.IsNullOrEmpty(userRole))
+            return Unauthorized(new { message = "Invalid user credentials in token." });
 
-        var deleted = await _noticeRepository.DeleteAsync(id, userId, userRole);
+        var deleted = await _noticeRepository.DeleteAsync(id, userId.Value, userRole);
         if (!deleted)
-        {
-            return NotFound(new ErrorResponse { Message = $"Notice with ID {id} was not found." });
-        }
+            return NotFound(new { message = $"Notice {id} not found." });
 
         return NoContent();
+    }
+
+    private (ulong? UserId, string? Role) GetActorDetails()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (ulong.TryParse(userIdClaim, out var userId) && !string.IsNullOrEmpty(roleClaim))
+            return (userId, roleClaim.ToUpper());
+
+        return (null, null);
     }
 }

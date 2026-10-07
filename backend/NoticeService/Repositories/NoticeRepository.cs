@@ -214,7 +214,7 @@ public class NoticeRepository : INoticeRepository
                 updated_at AS UpdatedAt
             FROM notices
             WHERE is_archived = FALSE 
-              AND (expiry_date IS NULL OR expiry_date >= CURRENT_DATE())
+              AND expiry_date >= CURRENT_DATE()
               AND (hostel_block_id = @HostelBlockId OR hostel_block_id IS NULL)
             ORDER BY created_at DESC;";
 
