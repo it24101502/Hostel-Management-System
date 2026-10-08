@@ -92,6 +92,8 @@ builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 builder.Services.AddScoped<IComplaintRepository, ComplaintRepository>();
 builder.Services.AddScoped<IStudentComplaintService, StudentComplaintService>();
+builder.Services.AddScoped<IStaffComplaintService, StaffComplaintService>();
+builder.Services.AddSingleton<INotificationPublisher, KafkaNotificationPublisher>();
 
 var app = builder.Build();
 

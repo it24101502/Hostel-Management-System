@@ -28,3 +28,5 @@ frontend/dist/
 frontend/.env.local
 # Runtime profile-photo uploads
 backend/IdentityService/wwwroot/uploads/profile-photos/
+
+TestResults/

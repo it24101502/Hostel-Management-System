@@ -25,91 +25,21 @@ public class StudentComplaintService : IStudentComplaintService
         ulong studentUserId,
         string studentUsername)
     {
-        var errors = Validate(request);
-
-        if (errors.Count > 0)
-        {
-            throw new ComplaintValidationException(errors);
-        }
-
-        // Validate guarantees these values are present and valid.
-        var newComplaint = new NewComplaint
-        {
-            StudentUserId = studentUserId,
-            StudentUsername = studentUsername,
-            Category = request.Category!.Trim().ToUpperInvariant(),
-            Description = request.Description!.Trim()
-        };
-
-        Complaint created =
-            await _repository.CreateAsync(
-                newComplaint,
-                _timeProvider.GetUtcNow().UtcDateTime);
-
-        return MapResponse(created);
-    }
-
-    public async Task<IReadOnlyList<ComplaintResponse>>
-        GetMyComplaintsAsync(ulong studentUserId)
-    {
-        var complaints =
-            await _repository.GetByStudentAsync(studentUserId);
-
-        return complaints.Select(MapResponse).ToList();
-    }
-
-    public async Task<ComplaintResponse?> GetMyComplaintAsync(
-        ulong complaintId,
-        ulong studentUserId)
-    {
-        var complaint =
-            await _repository.GetByIdAsync(complaintId);
-
-        // Another student's complaint is reported as "not found"
-        // so its existence is not revealed.
-        if (complaint is null ||
-            complaint.StudentUserId != studentUserId)
-        {
-            return null;
-        }
-
-        return MapResponse(complaint);
-    }
-
-    private static Dictionary<string, string[]> Validate(
-        SubmitComplaintRequest request)
-    {
         var errors = new Dictionary<string, string[]>();
 
-        string category =
-            request.Category?.Trim().ToUpperInvariant() ?? string.Empty;
+        string? cleanCategory = Normalise(request.Category);
+        string? cleanDescription = request.Description?.Trim();
 
-        if (category.Length == 0)
+        if (cleanCategory is null || !ComplaintCategories.All.Contains(cleanCategory))
         {
-            errors["category"] = new[]
-            {
-                "Category is required."
-            };
-        }
-        else if (!ComplaintCategories.All.Contains(category))
-        {
-            errors["category"] = new[]
-            {
-                "Category must be one of: " +
-                string.Join(", ", ComplaintCategories.All) + "."
-            };
+            errors["category"] = new[] { "Unknown category." };
         }
 
-        string description = request.Description?.Trim() ?? string.Empty;
-
-        if (description.Length == 0)
+        if (string.IsNullOrWhiteSpace(cleanDescription))
         {
-            errors["description"] = new[]
-            {
-                "Description is required."
-            };
+            errors["description"] = new[] { "Description is required." };
         }
-        else if (description.Length > MaxDescriptionLength)
+        else if (cleanDescription.Length > MaxDescriptionLength)
         {
             errors["description"] = new[]
             {
@@ -117,11 +47,70 @@ public class StudentComplaintService : IStudentComplaintService
             };
         }
 
-        return errors;
+        if (errors.Count > 0)
+        {
+            throw new ComplaintValidationException(errors);
+        }
+
+        var newComplaint = new NewComplaint
+        {
+            StudentUserId = studentUserId,
+            StudentUsername = studentUsername,
+            Category = cleanCategory!,
+            Description = cleanDescription!
+        };
+
+        DateTime nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        var created = await _repository.CreateAsync(newComplaint, nowUtc);
+
+        return ToResponse(created);
     }
 
-    private static ComplaintResponse MapResponse(
-        Complaint complaint)
+    public async Task<IReadOnlyList<ComplaintResponse>> GetMyComplaintsAsync(
+        ulong studentUserId)
+    {
+        var complaints = await _repository.GetByStudentAsync(studentUserId);
+        return complaints.Select(ToResponse).ToList();
+    }
+
+    public async Task<ComplaintResponse?> GetMyComplaintAsync(
+        ulong complaintId,
+        ulong studentUserId)
+    {
+        var complaint = await _repository.GetByIdAsync(complaintId);
+
+        if (complaint is null || complaint.StudentUserId != studentUserId)
+        {
+            return null;
+        }
+
+        return ToResponse(complaint);
+    }
+
+    public async Task<IReadOnlyList<StudentNotificationResponse>> GetNotificationsByStudentIdAsync(
+        ulong studentId)
+    {
+        return await _repository.GetNotificationsByStudentIdAsync(studentId);
+    }
+
+    public Task<bool> MarkNotificationReadAsync(
+        ulong notificationId,
+        ulong studentUserId)
+    {
+        return _repository.MarkNotificationReadAsync(
+            notificationId,
+            studentUserId,
+            _timeProvider.GetUtcNow().UtcDateTime);
+    }
+
+    private static string? Normalise(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim().ToUpperInvariant();
+    }
+
+    private static ComplaintResponse ToResponse(Complaint complaint)
     {
         return new ComplaintResponse
         {

@@ -1,5 +1,7 @@
 using ComplaintService.Models;
+using Microsoft.Extensions.Configuration;
 using MySqlConnector;
+using ComplaintService.DTOs;
 
 namespace ComplaintService.Repositories;
 
@@ -142,6 +144,286 @@ public class ComplaintRepository : IComplaintRepository
         }
 
         return complaints;
+    }
+
+    public async Task<IReadOnlyList<Complaint>> GetFilteredAsync(
+        string? status,
+        string? category)
+    {
+        string query = $"""
+            SELECT
+                {SelectColumns}
+            FROM complaints
+            WHERE (@status IS NULL OR status = @status)
+              AND (@category IS NULL OR category = @category)
+            ORDER BY created_at DESC, complaint_id DESC;
+            """;
+
+        var complaints = new List<Complaint>();
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var command =
+            new MySqlCommand(query, connection);
+
+        command.Parameters.AddWithValue(
+            "@status", (object?)status ?? DBNull.Value);
+        command.Parameters.AddWithValue(
+            "@category", (object?)category ?? DBNull.Value);
+
+        await using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            complaints.Add(MapComplaint(reader));
+        }
+
+        return complaints;
+    }
+
+    public async Task AssignAsync(
+        ulong complaintId,
+        ulong assigneeUserId,
+        ulong actorUserId,
+        string actorRole,
+        DateTime occurredAtUtc)
+    {
+        const string updateQuery = """
+            UPDATE complaints
+            SET assigned_to_user_id = @assignee,
+                assigned_at = @occurredAt
+            WHERE complaint_id = @complaintId;
+            """;
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var transaction =
+            await connection.BeginTransactionAsync();
+
+        try
+        {
+            string currentStatus;
+
+            await using (var read = new MySqlCommand(
+                "SELECT status FROM complaints WHERE complaint_id = @id;",
+                connection, transaction))
+            {
+                read.Parameters.AddWithValue("@id", complaintId);
+                currentStatus =
+                    Convert.ToString(await read.ExecuteScalarAsync())
+                    ?? throw new InvalidOperationException(
+                        "The complaint no longer exists.");
+            }
+
+            await using (var update = new MySqlCommand(
+                updateQuery, connection, transaction))
+            {
+                update.Parameters.AddWithValue("@assignee", assigneeUserId);
+                update.Parameters.AddWithValue("@occurredAt", occurredAtUtc);
+                update.Parameters.AddWithValue("@complaintId", complaintId);
+                await update.ExecuteNonQueryAsync();
+            }
+
+            await InsertAuditAsync(
+                connection, transaction, complaintId,
+                actorUserId, actorRole,
+                ComplaintAuditActions.Assign,
+                currentStatus, currentStatus,
+                $"Assigned to user {assigneeUserId}.",
+                occurredAtUtc);
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task<bool> TryChangeStatusAsync(
+        ulong complaintId,
+        string fromStatus,
+        string toStatus,
+        ulong actorUserId,
+        string actorRole,
+        string? remarks,
+        DateTime occurredAtUtc)
+    {
+        const string updateQuery = """
+            UPDATE complaints
+            SET status = @toStatus,
+                resolved_at = CASE WHEN @toStatus = 'RESOLVED'
+                                   THEN @occurredAt ELSE NULL END
+            WHERE complaint_id = @complaintId
+              AND status = @fromStatus;
+            """;
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var transaction =
+            await connection.BeginTransactionAsync();
+
+        try
+        {
+            int changedRows;
+
+            await using (var update = new MySqlCommand(
+                updateQuery, connection, transaction))
+            {
+                update.Parameters.AddWithValue("@toStatus", toStatus);
+                update.Parameters.AddWithValue("@fromStatus", fromStatus);
+                update.Parameters.AddWithValue("@occurredAt", occurredAtUtc);
+                update.Parameters.AddWithValue("@complaintId", complaintId);
+                changedRows = await update.ExecuteNonQueryAsync();
+            }
+
+            if (changedRows == 0)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            await InsertAuditAsync(
+                connection, transaction, complaintId,
+                actorUserId, actorRole,
+                ComplaintAuditActions.StatusChange,
+                fromStatus, toStatus, remarks, occurredAtUtc);
+
+            await transaction.CommitAsync();
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task AddNotificationAsync(
+        Guid notificationId,          // kept so the interface doesn't change; unused
+        ulong complaintId,
+        ulong studentId,
+        string message,
+        DateTime createdAtUtc)
+    {
+        const string sql = """
+            INSERT INTO complaint_notifications
+            (
+                complaint_id,
+                recipient_user_id,
+                message,
+                is_read,
+                created_at
+            )
+            VALUES
+            (
+                @complaintId,
+                @studentId,
+                @message,
+                0,
+                @createdAt
+            );
+            """;
+
+        await using var connection = new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var command = new MySqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@complaintId", complaintId);
+        command.Parameters.AddWithValue("@studentId", studentId);
+        command.Parameters.AddWithValue("@message", message);
+        command.Parameters.AddWithValue("@createdAt", createdAtUtc);
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+    public async Task<IReadOnlyList<StudentNotificationResponse>>
+        GetNotificationsByStudentIdAsync(ulong studentId)
+    {
+        const string query = """
+            SELECT
+                notification_id   AS NotificationId,
+                complaint_id      AS ComplaintId,
+                recipient_user_id AS StudentId,
+                message           AS Message,
+                is_read           AS IsRead,
+                created_at        AS CreatedAt
+            FROM complaint_notifications
+            WHERE recipient_user_id = @StudentId
+            ORDER BY created_at DESC, notification_id DESC;
+            """;
+
+        var notifications = new List<StudentNotificationResponse>();
+
+        await using var connection = new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var command = new MySqlCommand(query, connection);
+        command.Parameters.AddWithValue("@StudentId", studentId);
+
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            notifications.Add(new StudentNotificationResponse
+            {
+                NotificationId = Convert.ToString(reader["NotificationId"])!,
+                ComplaintId = Convert.ToUInt64(reader["ComplaintId"]),
+                StudentId = Convert.ToUInt64(reader["StudentId"]),
+                Message = Convert.ToString(reader["Message"])!,
+                IsRead = Convert.ToBoolean(reader["IsRead"]),
+                CreatedAt = DateTime.SpecifyKind(
+                    reader.GetDateTime("CreatedAt"), DateTimeKind.Utc)
+            });
+        }
+
+        return notifications;
+    }
+
+    public async Task<bool> MarkNotificationReadAsync(
+        ulong notificationId,
+        ulong studentUserId,
+        DateTime readAtUtc)
+    {
+        const string updateQuery = """
+            UPDATE complaint_notifications
+            SET is_read = TRUE,
+                read_at = @readAt
+            WHERE notification_id = @notificationId
+            AND recipient_user_id = @studentUserId
+            AND is_read = FALSE;
+            """;
+
+        const string existsQuery = """
+            SELECT 1
+            FROM complaint_notifications
+            WHERE notification_id = @notificationId
+            AND recipient_user_id = @studentUserId
+            LIMIT 1;
+            """;
+
+        await using var connection = new MySqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using (var update = new MySqlCommand(updateQuery, connection))
+        {
+            update.Parameters.AddWithValue("@readAt", readAtUtc);
+            update.Parameters.AddWithValue("@notificationId", notificationId);
+            update.Parameters.AddWithValue("@studentUserId", studentUserId);
+            await update.ExecuteNonQueryAsync();
+        }
+
+        await using var exists = new MySqlCommand(existsQuery, connection);
+        exists.Parameters.AddWithValue("@notificationId", notificationId);
+        exists.Parameters.AddWithValue("@studentUserId", studentUserId);
+
+        return await exists.ExecuteScalarAsync() is not null;
     }
 
     private static async Task<ulong> InsertComplaintAsync(
@@ -314,10 +596,6 @@ public class ComplaintRepository : IComplaintRepository
             ResolvedAt =
                 ReadNullableUtcDateTime(reader, "resolved_at"),
 
-            // MySQL returns DATETIME without a time zone. The
-            // service stores UTC, so mark the value as UTC so it is
-            // serialised with a trailing "Z" and browsers convert
-            // it to the viewer's local time correctly.
             CreatedAt =
                 DateTime.SpecifyKind(
                     reader.GetDateTime("created_at"),

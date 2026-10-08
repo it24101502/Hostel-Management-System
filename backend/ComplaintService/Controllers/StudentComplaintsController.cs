@@ -30,15 +30,27 @@ public class StudentComplaintsController : ControllerBase
         }
 
         var complaints =
-            await _complaintService.GetMyComplaintsAsync(
-                studentUserId);
+            await _complaintService.GetMyComplaintsAsync(studentUserId);
 
         return Ok(complaints);
     }
 
+    [HttpGet("notifications")]
+    public async Task<IActionResult> GetStudentNotifications()
+    {
+        if (!TryGetAuthenticatedUserId(out ulong studentUserId))
+        {
+            return Unauthorized(CreateUserIdError());
+        }
+
+        var notifications =
+            await _complaintService.GetNotificationsByStudentIdAsync(studentUserId);
+
+        return Ok(notifications);
+    }
+
     [HttpGet("{complaintId:long}")]
-    public async Task<IActionResult> GetMyComplaint(
-        ulong complaintId)
+    public async Task<IActionResult> GetMyComplaint(ulong complaintId)
     {
         if (!TryGetAuthenticatedUserId(out ulong studentUserId))
         {
@@ -62,8 +74,7 @@ public class StudentComplaintsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Submit(
-        [FromBody] SubmitComplaintRequest request)
+    public async Task<IActionResult> Submit([FromBody] SubmitComplaintRequest request)
     {
         if (!TryGetAuthenticatedUserId(out ulong studentUserId))
         {
@@ -76,8 +87,7 @@ public class StudentComplaintsController : ControllerBase
         {
             return Unauthorized(new ErrorResponse
             {
-                Message =
-                    "The authenticated student's username is missing."
+                Message = "The authenticated student's username is missing."
             });
         }
 
@@ -107,7 +117,8 @@ public class StudentComplaintsController : ControllerBase
     private bool TryGetAuthenticatedUserId(out ulong userId)
     {
         string? userIdValue =
-            User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value 
+            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
         return ulong.TryParse(userIdValue, out userId);
     }
@@ -116,8 +127,30 @@ public class StudentComplaintsController : ControllerBase
     {
         return new ErrorResponse
         {
-            Message =
-                "The authenticated student ID is missing or invalid."
+            Message = "The authenticated student ID is missing or invalid."
         };
+    }
+
+    [HttpPut("notifications/{notificationId:long}/read")]
+    public async Task<IActionResult> MarkNotificationRead(ulong notificationId)
+    {
+        if (!TryGetAuthenticatedUserId(out ulong studentUserId))
+        {
+            return Unauthorized(CreateUserIdError());
+        }
+
+        bool found = await _complaintService.MarkNotificationReadAsync(
+            notificationId,
+            studentUserId);
+
+        if (!found)
+        {
+            return NotFound(new ErrorResponse
+            {
+                Message = "The notification was not found."
+            });
+        }
+
+        return NoContent();
     }
 }
