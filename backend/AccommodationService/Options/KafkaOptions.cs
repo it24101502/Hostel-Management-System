@@ -12,4 +12,7 @@ public sealed class KafkaOptions
 
     public string ConsumerGroupId { get; init; } =
         "accommodation-service";
+
+    public string StudentAllocationChangedTopic { get; init; } =
+        "student-allocation-changed";
 }

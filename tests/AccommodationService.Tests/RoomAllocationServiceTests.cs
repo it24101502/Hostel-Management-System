@@ -3,6 +3,8 @@ using AccommodationService.Exceptions;
 using AccommodationService.Models;
 using AccommodationService.Repositories;
 using AccommodationService.Services;
+using AccommodationService.Events;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AccommodationService.Tests;
 
@@ -247,5 +249,61 @@ public class RoomAllocationServiceTests
             return Task.FromResult(false);
         }
 
+    }
+
+        [Fact]
+    public async Task AllocateStudent_PublishesEventWithTheRoomsBlock()
+    {
+        var repository = new FakeRoomAllocationRepository
+        {
+            AllocationResult = CreateAllocation(101, 10, 4, 2)
+        };
+        var publisher = new FakeAllocationEventPublisher();
+        var service = new RoomAllocationService(
+            repository, publisher, NullLogger<RoomAllocationService>.Instance);
+
+        await service.AllocateAsync(
+            new AllocateStudentRequest { StudentProfileId = 101, RoomId = 10 }, 7);
+
+        var published = Assert.Single(publisher.Events);
+        Assert.Equal((ulong)101, published.StudentProfileId);
+        Assert.Equal((ulong)1, published.BlockId);
+        Assert.Equal("A", published.BlockCode);
+        Assert.Equal("Block A", published.BlockName);
+    }
+
+    [Fact]
+    public async Task AllocateStudent_WhenPublisherFails_StillReturnsAllocation()
+    {
+        var repository = new FakeRoomAllocationRepository
+        {
+            AllocationResult = CreateAllocation(101, 10, 4, 2)
+        };
+        var publisher = new FakeAllocationEventPublisher
+        {
+            ExceptionToThrow = new InvalidOperationException("Kafka is down.")
+        };
+        var service = new RoomAllocationService(
+            repository, publisher, NullLogger<RoomAllocationService>.Instance);
+
+        var result = await service.AllocateAsync(
+            new AllocateStudentRequest { StudentProfileId = 101, RoomId = 10 }, 7);
+
+        Assert.Equal((ulong)101, result.StudentProfileId);
+    }
+
+    private sealed class FakeAllocationEventPublisher : IAllocationEventPublisher
+    {
+        public List<StudentAllocationChangedEvent> Events { get; } = [];
+        public Exception? ExceptionToThrow { get; set; }
+
+        public Task PublishAsync(
+            StudentAllocationChangedEvent eventMessage,
+            CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow is not null) throw ExceptionToThrow;
+            Events.Add(eventMessage);
+            return Task.CompletedTask;
+        }
     }
 }

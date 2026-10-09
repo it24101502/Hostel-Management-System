@@ -572,6 +572,18 @@ jobs:
           echo "Expected 2 notice tables; found $TABLE_COUNT."
           test "$TABLE_COUNT" -eq 2
 
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run NoticeService repository tests against MySQL
+        env:
+          NOTICE_TEST_CONNECTION: Server=127.0.0.1;Port=3306;Database=Hostel_Notice_System;User ID=root;Password=${{ secrets.MYSQL_ROOT_PASSWORD }};
+        run: >
+          dotnet test tests/NoticeService.Tests/NoticeService.Tests.csproj
+          --configuration Release --filter "Category=MySql"
+
       - name: Verify notice archive and student filtering with sample data
         run: |
           MYSQL="mysql --host=127.0.0.1 --port=3306 --user=root --password=$MYSQL_ROOT_PASSWORD --batch --skip-column-names"

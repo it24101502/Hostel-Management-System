@@ -92,6 +92,7 @@ services:
       - -c
       - |
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic student-deactivated --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic student-allocation-changed --partitions 1 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-requested --partitions 1 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-approved --partitions 1 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-overdue --partitions 1 --replication-factor 1
@@ -113,6 +114,8 @@ services:
       OverdueFeeJob__Enabled: "true"
       Kafka__BootstrapServers: "kafka:19092"
       Kafka__StudentDeactivatedTopic: "student-deactivated"
+      Kafka__StudentAllocationChangedTopic: "student-allocation-changed"
+      Kafka__ConsumerGroupId: "identity-service"
     ports:
       - "8080:8080"
     volumes:
@@ -137,6 +140,7 @@ services:
       ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Accommodation_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
       Kafka__BootstrapServers: "kafka:19092"
       Kafka__StudentDeactivatedTopic: "student-deactivated"
+      Kafka__StudentAllocationChangedTopic: "student-allocation-changed"
       Kafka__ConsumerGroupId: "accommodation-service"
     ports:
       - "8081:8080"

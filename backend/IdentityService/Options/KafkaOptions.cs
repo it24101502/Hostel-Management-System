@@ -9,4 +9,9 @@ public sealed class KafkaOptions
 
     public string StudentDeactivatedTopic { get; init; } =
         "student-deactivated";
+
+    public string StudentAllocationChangedTopic { get; init; } =
+        "student-allocation-changed";
+
+    public string ConsumerGroupId { get; init; } = "identity-service";
 }

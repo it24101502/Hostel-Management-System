@@ -1,7 +1,5 @@
-using System.Data;
 using System.Security.Claims;
 using System.Text;
-using Dapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -12,10 +10,6 @@ using NoticeService.Options;
 using NoticeService.Repositories;
 using NoticeService.Services;
 using Quartz;
-
-// MySQL DATE columns are read as DateTime. This lets Dapper map them
-// to and from DateOnly (used by the notice DTOs and the archive job).
-SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -122,19 +116,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-internal sealed class DateOnlyTypeHandler : SqlMapper.TypeHandler<DateOnly>
-{
-    public override void SetValue(IDbDataParameter parameter, DateOnly value)
-    {
-        parameter.DbType = DbType.Date;
-        parameter.Value = value.ToDateTime(TimeOnly.MinValue);
-    }
-
-    public override DateOnly Parse(object value) => value switch
-    {
-        DateOnly dateOnly => dateOnly,
-        DateTime dateTime => DateOnly.FromDateTime(dateTime),
-        _ => DateOnly.Parse(value.ToString()!)
-    };
-}

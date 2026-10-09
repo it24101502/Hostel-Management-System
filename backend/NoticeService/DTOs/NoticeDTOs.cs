@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using NoticeService.Validation;
 
 namespace NoticeService.DTOs;
 
@@ -7,7 +8,7 @@ public record CreateNoticeRequest(
     [Required, StringLength(4000, MinimumLength = 1)] string Content,
     [Required, RegularExpression("^(NOTICE|SCHEDULE)$", ErrorMessage = "NoticeType must be 'NOTICE' or 'SCHEDULE'")] string NoticeType,
     ulong? HostelBlockId,
-    [Required] DateOnly ExpiryDate
+    [Required, ExpiryDateNotInPast] DateOnly ExpiryDate
 );
 
 public record UpdateNoticeRequest(
@@ -15,7 +16,7 @@ public record UpdateNoticeRequest(
     [Required, StringLength(4000, MinimumLength = 1)] string Content,
     [Required, RegularExpression("^(NOTICE|SCHEDULE)$", ErrorMessage = "NoticeType must be 'NOTICE' or 'SCHEDULE'")] string NoticeType,
     ulong? HostelBlockId,
-    [Required] DateOnly ExpiryDate
+    [Required, ExpiryDateNotInPast] DateOnly ExpiryDate
 );
 
 public record NoticeResponse(

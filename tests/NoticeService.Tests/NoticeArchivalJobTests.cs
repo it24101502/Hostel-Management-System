@@ -46,20 +46,21 @@ public class NoticeArchivalJobTests
     }
 
     [Fact]
-    public async Task Execute_LogsInfo_WhenArchivalSucceeds()
+    public async Task Execute_LogsArchivedCount_WhenArchivalSucceeds()
     {
         // Arrange
-        var simulatedToday = new DateOnly(2026, 10, 12);
-        _mockTimeProvider.Setup(t => t.Today).Returns(simulatedToday);
+        var today = new DateOnly(2026, 10, 12);
+        _mockTimeProvider.Setup(t => t.Today).Returns(today);
         _mockRepository
-            .Setup(r => r.ArchiveExpiredNoticesAsync(simulatedToday))
-            .ReturnsAsync(0);
+            .Setup(r => r.ArchiveExpiredNoticesAsync(today))
+            .ReturnsAsync(3);
 
         // Act
         await _job.Execute(_mockJobContext.Object, CancellationToken.None);
 
         // Assert
-        _mockRepository.Verify(r => r.ArchiveExpiredNoticesAsync(simulatedToday), Times.Once);
+        VerifyLogged(LogLevel.Information, "Total notices archived: 3", Times.Once());
+        VerifyLogged(LogLevel.Error, "", Times.Never());
     }
 
     [Fact]
@@ -73,8 +74,22 @@ public class NoticeArchivalJobTests
             .ThrowsAsync(new Exception("Database connection failure"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<JobExecutionException>(async () => await _job.Execute(_mockJobContext.Object, CancellationToken.None));
+        var exception = await Assert.ThrowsAsync<JobExecutionException>(async () => 
+            await _job.Execute(_mockJobContext.Object, CancellationToken.None));
+            
         Assert.NotNull(exception.InnerException);
         Assert.Equal("Database connection failure", exception.InnerException.Message);
+        
+        VerifyLogged(LogLevel.Error, "An error occurred while executing", Times.Once());
     }
+
+    private void VerifyLogged(LogLevel level, string containing, Times times) =>
+        _mockLogger.Verify(
+            l => l.Log(
+                level,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains(containing)),
+                It.IsAny<Exception?>(),
+                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+            times);
 }

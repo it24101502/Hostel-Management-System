@@ -9,10 +9,12 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using AccommodationService.BackgroundServices;
 using Microsoft.OpenApi;
+using AccommodationService.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddSingleton<IAllocationEventPublisher, KafkaAllocationEventPublisher>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

@@ -7,6 +7,11 @@ namespace NoticeService.Repositories;
 
 public class NoticeRepository : INoticeRepository
 {
+    static NoticeRepository()
+    {
+        SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
+    }
+    
     private const string SelectColumns = @"
         notice_id AS NoticeId,
         title AS Title,
