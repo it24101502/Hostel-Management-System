@@ -50,6 +50,13 @@ const modulesByRole = {
       description: "Review, assign and resolve student complaints.",
       href: "/admin/complaints",
       accent: "indigo"
+    },
+    {
+      number: "06",
+      title: "Notices",
+      description: "Publish notices and schedules for hostel blocks.",
+      href: "/admin/notices",
+      accent: "violet"
     }
   ],
   STUDENT: [
@@ -89,6 +96,13 @@ const modulesByRole = {
       description: "Review, assign and resolve student complaints.",
       href: "/warden/complaints",
       accent: "cyan"
+    },
+    {
+      number: "03",
+      title: "Notices",
+      description: "Publish notices and schedules for hostel blocks.",
+      href: "/warden/notices",
+      accent: "violet"
     }
   ],
   HOSTEL_MASTER: [
@@ -105,6 +119,13 @@ const modulesByRole = {
       description: "Review, assign and resolve student complaints.",
       href: "/hostel-master/complaints",
       accent: "cyan"
+    },
+    {
+      number: "03",
+      title: "Notices",
+      description: "Publish notices and schedules for hostel blocks.",
+      href: "/hostel-master/notices",
+      accent: "violet"
     }
   ]
 };

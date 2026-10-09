@@ -229,6 +229,7 @@ services:
         VITE_ACCOMMODATION_API_BASE_URL: http://localhost:8081
         VITE_LEAVE_API_BASE_URL: http://localhost:8082
         VITE_COMPLAINT_API_BASE_URL: http://localhost:8083
+        VITE_NOTICE_API_BASE_URL: http://localhost:8084
     image: hostel-frontend:sprint1
     container_name: hostel-frontend-web
     restart: unless-stopped
@@ -239,6 +240,7 @@ services:
       - accommodation-api
       - leave-api
       - complaint-api
+      - notice-api
 
 volumes:
   hostel-mysql-data:

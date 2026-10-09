@@ -36,5 +36,6 @@ services:
         VITE_ACCOMMODATION_API_BASE_URL: http://localhost:8091
         VITE_LEAVE_API_BASE_URL: http://localhost:8092
         VITE_COMPLAINT_API_BASE_URL: http://localhost:8093
+        VITE_NOTICE_API_BASE_URL: http://localhost:8094
     ports:
       - "5174:80"

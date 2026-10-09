@@ -9,6 +9,7 @@ import RoomsPage from "./RoomsPage.jsx";
 import AllocationsPage from "./AllocationsPage.jsx";
 import StudentComplaintsPage from "./StudentComplaintsPage.jsx";
 import StaffComplaintsPage from "./StaffComplaintsPage.jsx";
+import StaffNoticesPage from "./StaffNoticesPage.jsx";
 
 const landingPageRoles = {
   "/student": "STUDENT",
@@ -338,6 +339,14 @@ function App() {
     window.location.pathname === "/admin/complaints"
   ) {
     return <StaffComplaintsPage />;
+  }
+
+  if (
+    window.location.pathname === "/warden/notices" ||
+    window.location.pathname === "/hostel-master/notices" ||
+    window.location.pathname === "/admin/notices"
+  ) {
+    return <StaffNoticesPage />;
   }
 
   const requiredRole =

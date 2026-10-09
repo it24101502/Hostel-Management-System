@@ -7,7 +7,8 @@ const navigationByRole = {
     { key: "rooms", label: "Rooms", href: "/admin/rooms", icon: "rooms" },
     { key: "allocations", label: "Allocations", href: "/admin/allocations", icon: "allocations" },
     { key: "leave", label: "Leave report", href: "/admin/leave", icon: "leave" },
-    { key: "complaints", label: "Complaints", href: "/admin/complaints", icon: "complaints" }
+    { key: "complaints", label: "Complaints", href: "/admin/complaints", icon: "complaints" },
+    { key: "notices", label: "Notices", href: "/admin/notices", icon: "notices" }
   ],
   STUDENT: [
     { key: "dashboard", label: "Dashboard", href: "/student", icon: "dashboard" },
@@ -18,12 +19,14 @@ const navigationByRole = {
   WARDEN: [
     { key: "dashboard", label: "Dashboard", href: "/warden", icon: "dashboard" },
     { key: "leave", label: "Leave requests", href: "/warden/leave", icon: "leave" },
-    { key: "complaints", label: "Complaints", href: "/warden/complaints", icon: "complaints" }
+    { key: "complaints", label: "Complaints", href: "/warden/complaints", icon: "complaints" },
+    { key: "notices", label: "Notices", href: "/warden/notices", icon: "notices" }
   ],
   HOSTEL_MASTER: [
     { key: "dashboard", label: "Dashboard", href: "/hostel-master", icon: "dashboard" },
     { key: "leave", label: "Leave requests", href: "/hostel-master/leave", icon: "leave" },
-    { key: "complaints", label: "Complaints", href: "/hostel-master/complaints", icon: "complaints" }
+    { key: "complaints", label: "Complaints", href: "/hostel-master/complaints", icon: "complaints" },
+    { key: "notices", label: "Notices", href: "/hostel-master/notices", icon: "notices" }
   ]
 };
 
@@ -86,6 +89,12 @@ function NavIcon({ name }) {
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         <path d="M12 8v3" />
         <path d="M12 14h.01" />
+      </>
+    ),
+    notices: (
+      <>
+        <path d="M4 11v2a1 1 0 0 0 1 1h2l5 4V6L7 10H5a1 1 0 0 0-1 1z" />
+        <path d="M16 8a5 5 0 0 1 0 8" />
       </>
     )
   };
