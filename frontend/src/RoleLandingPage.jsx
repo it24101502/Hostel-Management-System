@@ -80,6 +80,13 @@ const modulesByRole = {
       description: "Report hostel problems and follow their progress.",
       href: "/student/complaints",
       accent: "violet"
+    },
+    {
+      number: "04",
+      title: "Notices",
+      description: "See current notices and schedules for your block.",
+      href: "/student/notices",
+      accent: "indigo"
     }
   ],
   WARDEN: [

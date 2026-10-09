@@ -14,7 +14,8 @@ const navigationByRole = {
     { key: "dashboard", label: "Dashboard", href: "/student", icon: "dashboard" },
     { key: "profile", label: "My profile", href: "/student/profile", icon: "profile" },
     { key: "leave", label: "Leave requests", href: "/student/leave", icon: "leave" },
-    { key: "complaints", label: "Complaints", href: "/student/complaints", icon: "complaints" }
+    { key: "complaints", label: "Complaints", href: "/student/complaints", icon: "complaints" },
+    { key: "notices", label: "Notices", href: "/student/notices", icon: "notices" }
   ],
   WARDEN: [
     { key: "dashboard", label: "Dashboard", href: "/warden", icon: "dashboard" },
