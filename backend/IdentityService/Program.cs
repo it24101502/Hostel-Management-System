@@ -41,6 +41,14 @@ builder.Services.Configure<
         builder.Configuration.GetSection(
             OverdueFeeJobOptions.SectionName));
 
+builder.Services.AddScoped<
+    IStudentFeeReminderRepository,
+    StudentFeeReminderRepository>();
+
+builder.Services.AddScoped<
+    IStudentFeeReminderService,
+    StudentFeeReminderService>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(

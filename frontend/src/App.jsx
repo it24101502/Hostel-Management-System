@@ -11,6 +11,7 @@ import StudentComplaintsPage from "./StudentComplaintsPage.jsx";
 import StaffComplaintsPage from "./StaffComplaintsPage.jsx";
 import StudentNoticesPage from "./StudentNoticesPage.jsx";
 import StaffNoticesPage from "./StaffNoticesPage.jsx";
+import StudentFeesPage from "./StudentFeesPage.jsx";
 
 const landingPageRoles = {
   "/student": "STUDENT",
@@ -340,6 +341,13 @@ function App() {
     window.location.pathname === "/admin/complaints"
   ) {
     return <StaffComplaintsPage />;
+  }
+
+  if (
+    window.location.pathname ===
+    "/student/fees"
+  ) {
+    return <StudentFeesPage />;
   }
 
   if (

@@ -14,6 +14,7 @@ const navigationByRole = {
     { key: "dashboard", label: "Dashboard", href: "/student", icon: "dashboard" },
     { key: "profile", label: "My profile", href: "/student/profile", icon: "profile" },
     { key: "leave", label: "Leave requests", href: "/student/leave", icon: "leave" },
+    { key: "fees", label: "Fees", href: "/student/fees", icon: "fees" },
     { key: "complaints", label: "Complaints", href: "/student/complaints", icon: "complaints" },
     { key: "notices", label: "Notices", href: "/student/notices", icon: "notices" }
   ],
@@ -96,6 +97,14 @@ function NavIcon({ name }) {
       <>
         <path d="M4 11v2a1 1 0 0 0 1 1h2l5 4V6L7 10H5a1 1 0 0 0-1 1z" />
         <path d="M16 8a5 5 0 0 1 0 8" />
+      </>
+    ),
+    fees: (
+      <>
+        <rect x="2" y="6" width="20" height="12" rx="2" />
+        <circle cx="12" cy="12" r="2.5" />
+        <path d="M6 12h.01" />
+        <path d="M18 12h.01" />
       </>
     )
   };

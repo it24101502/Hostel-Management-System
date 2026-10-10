@@ -87,6 +87,13 @@ const modulesByRole = {
       description: "See current notices and schedules for your block.",
       href: "/student/notices",
       accent: "indigo"
+    },
+    {
+      number: "05",
+      title: "Fee reminders",
+      description: "See overdue hostel fees that need your attention.",
+      href: "/student/fees",
+      accent: "cyan"
     }
   ],
   WARDEN: [
