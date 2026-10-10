@@ -93,6 +93,7 @@ services:
       - |
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic student-deactivated --partitions 1 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic student-allocation-changed --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-events --partitions 1 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-requested --partitions 1 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-approved --partitions 1 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-overdue --partitions 1 --replication-factor 1
@@ -194,6 +195,7 @@ services:
       Kafka__ConsumerGroupId: "complaint-service"
       Kafka__ComplaintSubmittedTopic: "complaint-submitted"
       Kafka__ComplaintUpdatedTopic: "complaint-updated"
+      Services__IdentityBaseUrl: "http://identity-api:8080"
     ports:
       - "8083:8080"
     depends_on:
@@ -214,6 +216,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       Jwt__Key: ${JWT_KEY}
       ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Notice_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
+      Services__AccommodationBaseUrl: "http://accommodation-api:8080"
     ports:
       - "8084:8080"
     depends_on:

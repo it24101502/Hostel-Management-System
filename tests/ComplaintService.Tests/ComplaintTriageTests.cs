@@ -15,10 +15,13 @@ public class ComplaintTriageTests
 
     private static StaffComplaintService CreateService(
         FakeComplaintRepository repository,
-        INotificationPublisher? notificationPublisher = null)
+        INotificationPublisher? notificationPublisher = null,
+        IStaffDirectory? staffDirectory = null)
     {
         var publisher = notificationPublisher ?? Substitute.For<INotificationPublisher>();
-        return new StaffComplaintService(repository, new FixedTimeProvider(Now), publisher);
+        var staffDir = staffDirectory ?? Substitute.For<IStaffDirectory>();
+        staffDir.IsActiveStaffAsync(Arg.Any<ulong>(), Arg.Any<CancellationToken>()).Returns(true);
+        return new StaffComplaintService(repository, new FixedTimeProvider(Now), publisher, staffDir);
     }
 
     [Fact]

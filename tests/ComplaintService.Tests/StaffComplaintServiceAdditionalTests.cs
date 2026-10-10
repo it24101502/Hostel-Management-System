@@ -10,11 +10,6 @@ using NSubstitute.ExceptionExtensions;
 
 namespace ComplaintService.Tests;
 
-/// <summary>
-/// Covers the parts of StaffComplaintService the other test classes do
-/// not: the student notification row (HMS-55), the published event,
-/// concurrency, validation limits, CSV escaping and report ordering.
-/// </summary>
 public class StaffComplaintServiceAdditionalTests
 {
     private static readonly DateTimeOffset Now =
@@ -22,15 +17,17 @@ public class StaffComplaintServiceAdditionalTests
 
     private static StaffComplaintService CreateService(
         IComplaintRepository repository,
-        INotificationPublisher? publisher = null) =>
-        new(repository,
+        INotificationPublisher? publisher = null,
+        IStaffDirectory? staffDirectory = null)
+    {
+        var staffDir = staffDirectory ?? Substitute.For<IStaffDirectory>();
+        staffDir.IsActiveStaffAsync(Arg.Any<ulong>(), Arg.Any<CancellationToken>()).Returns(true);
+        return new(repository,
             new FixedTimeProvider(Now),
-            publisher ?? Substitute.For<INotificationPublisher>());
+            publisher ?? Substitute.For<INotificationPublisher>(),
+            staffDir);
+    }
 
-    /// <summary>
-    /// A mocked repository holding one complaint (id 101, owner 500)
-    /// whose status change succeeds.
-    /// </summary>
     private static (IComplaintRepository Repository, Complaint Complaint)
         CreateMockedRepository(string status = ComplaintStatuses.Open)
     {
@@ -60,8 +57,6 @@ public class StaffComplaintServiceAdditionalTests
 
         return (repository, complaint);
     }
-
-    // ---------- HMS-55: student notification row ----------
 
     [Fact]
     public async Task ChangeStatus_SavesANotificationForTheOwningStudent()
@@ -159,8 +154,6 @@ public class StaffComplaintServiceAdditionalTests
             Arg.Any<DateTime>());
     }
 
-    // ---------- published event ----------
-
     [Fact]
     public async Task ChangeStatus_PublishesAnEventWithOldAndNewStatusAndStudent()
     {
@@ -181,8 +174,6 @@ public class StaffComplaintServiceAdditionalTests
                 e.NewStatus == "IN_PROGRESS" &&
                 e.Timestamp == Now.UtcDateTime));
     }
-
-    // ---------- change status: lookup, normalising, remarks ----------
 
     [Fact]
     public async Task ChangeStatus_ForAMissingComplaint_ThrowsNotFound()
@@ -327,8 +318,6 @@ public class StaffComplaintServiceAdditionalTests
         Assert.True(exception.Errors.ContainsKey("remarks"));
     }
 
-    // ---------- assign ----------
-
     [Fact]
     public async Task Assign_WithAssigneeZero_IsRejectedAndNothingChanges()
     {
@@ -380,8 +369,6 @@ public class StaffComplaintServiceAdditionalTests
         Assert.Equal((ulong)21, audit.ActorUserId);
     }
 
-    // ---------- list filters ----------
-
     [Fact]
     public async Task GetComplaints_WithUnknownCategory_IsRejected()
     {
@@ -404,8 +391,6 @@ public class StaffComplaintServiceAdditionalTests
 
         Assert.Equal(2, result.Count);
     }
-
-    // ---------- report ----------
 
     [Fact]
     public async Task Report_ListsCategoryTotalsInAlphabeticalOrder()
@@ -463,8 +448,6 @@ public class StaffComplaintServiceAdditionalTests
         Assert.True(exception.Errors.ContainsKey("status"));
         Assert.True(exception.Errors.ContainsKey("category"));
     }
-
-    // ---------- CSV ----------
 
     private static async Task<string> GenerateCsvAsync(
         FakeComplaintRepository repository,
@@ -604,7 +587,6 @@ public class StaffComplaintServiceAdditionalTests
 
         string csv = await GenerateCsvAsync(repository, "open", "plumbing");
 
-        // Header plus exactly one data row.
         string[] lines = csv
             .Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
@@ -619,8 +601,6 @@ public class StaffComplaintServiceAdditionalTests
             () => CreateService(new FakeComplaintRepository())
                 .GenerateReportCsvAsync("nonsense", null));
     }
-
-    // ---------- publisher resilience ----------
 
     [Fact]
     public async Task ChangeStatus_WhenPublisherThrows_StillSavesTheNotificationRow()

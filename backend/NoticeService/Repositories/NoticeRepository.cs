@@ -106,7 +106,11 @@ public class NoticeRepository : INoticeRepository
                 content = @Content,
                 notice_type = UPPER(@NoticeType),
                 hostel_block_id = @HostelBlockId,
-                expiry_date = @ExpiryDate
+                expiry_date = @ExpiryDate,
+                -- A valid expiry date is never in the past, so saving
+                -- an archived notice republishes it.
+                is_archived = IF(@ExpiryDate >= UTC_DATE(), FALSE, is_archived),
+                archived_at = IF(@ExpiryDate >= UTC_DATE(), NULL, archived_at)
             WHERE notice_id = @NoticeId;";
 
         var affectedRows = await connection.ExecuteAsync(updateNoticeSql, new

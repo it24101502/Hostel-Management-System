@@ -5,6 +5,7 @@ using Moq;
 using NoticeService.Controllers;
 using NoticeService.DTOs;
 using NoticeService.Repositories;
+using NoticeService.Services;
 using Xunit;
 
 namespace NoticeService.Tests;
@@ -12,12 +13,18 @@ namespace NoticeService.Tests;
 public class NoticesControllerTests
 {
     private readonly Mock<INoticeRepository> _mockRepository;
+    private readonly Mock<IBlockDirectory> _mockBlockDirectory;
     private readonly NoticesController _controller;
 
     public NoticesControllerTests()
     {
         _mockRepository = new Mock<INoticeRepository>();
-        _controller = new NoticesController(_mockRepository.Object);
+        _mockBlockDirectory = new Mock<IBlockDirectory>();
+        _mockBlockDirectory
+            .Setup(b => b.IsActiveBlockAsync(It.IsAny<ulong>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _controller = new NoticesController(_mockRepository.Object, _mockBlockDirectory.Object);
 
         SetUserContext(10, "WARDEN");
     }
@@ -84,7 +91,6 @@ public class NoticesControllerTests
 
         _mockRepository.Setup(r => r.CreateAsync(request, 10UL, "WARDEN")).ReturnsAsync(response);
 
-        // Same claims a real IdentityService token carries.
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -167,7 +173,6 @@ public class NoticesControllerTests
     [Fact]
     public async Task GetStudentNotices_ReturnsOk_WithBlockAndGeneralNotices()
     {
-        // Arrange
         ulong studentBlockId = 2UL;
         var notices = new List<NoticeResponse>
         {
@@ -181,10 +186,8 @@ public class NoticesControllerTests
 
         SetUserContext(201, "STUDENT");
 
-        // Act
         var actionResult = await _controller.GetStudentNotices(studentBlockId);
 
-        // Assert
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         Assert.Equal(200, okResult.StatusCode);
 
@@ -195,10 +198,8 @@ public class NoticesControllerTests
     [Fact]
     public async Task GetStudentNotices_ReturnsBadRequest_WhenBlockIdIsZero()
     {
-        // Act
         var actionResult = await _controller.GetStudentNotices(0);
 
-        // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
@@ -206,7 +207,6 @@ public class NoticesControllerTests
     [Fact]
     public async Task GetStudentNotices_ReturnsEmptyList_WhenNoActiveNoticesExist()
     {
-        // Arrange
         ulong studentBlockId = 99UL;
         _mockRepository
             .Setup(r => r.GetStudentNoticesAsync(studentBlockId))
@@ -214,10 +214,8 @@ public class NoticesControllerTests
 
         SetUserContext(202, "STUDENT");
 
-        // Act
         var actionResult = await _controller.GetStudentNotices(studentBlockId);
 
-        // Assert
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         var returnedNotices = Assert.IsAssignableFrom<IEnumerable<NoticeResponse>>(okResult.Value);
         Assert.Empty(returnedNotices);

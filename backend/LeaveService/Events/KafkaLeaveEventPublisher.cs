@@ -50,7 +50,7 @@ public sealed class KafkaLeaveEventPublisher
             // queue. The delivery handler runs later, when Kafka
             // confirms or rejects the message.
             _producer.Produce(
-                _options.LeaveRequestedTopic,
+                ResolveTopic(eventMessage.EventType),
                 new Message<string, string>
                 {
                     // Keying by request keeps every event of one
@@ -89,6 +89,22 @@ public sealed class KafkaLeaveEventPublisher
 
         return Task.CompletedTask;
     }
+
+    // Each kind of event goes to its own topic so consumers can
+    // subscribe to only what they need. Rejections, departures
+    // and returns have no dedicated topic and use the general
+    // leave-events topic.
+    private string ResolveTopic(string eventType) =>
+        eventType switch
+        {
+            LeaveEventTypes.RequestSubmitted =>
+                _options.LeaveRequestedTopic,
+            LeaveEventTypes.RequestApproved =>
+                _options.LeaveApprovedTopic,
+            LeaveEventTypes.ReturnOverdue =>
+                _options.LeaveOverdueTopic,
+            _ => _options.LeaveEventsTopic
+        };
 
     public void Dispose()
     {

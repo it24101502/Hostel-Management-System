@@ -18,6 +18,21 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IDateTimeProvider, SystemDateTimeProvider>();
 builder.Services.AddScoped<INoticeRepository, NoticeRepository>();
 
+builder.Services.AddHttpClient<IBlockDirectory, AccommodationBlockDirectory>(
+    client =>
+    {
+        string? baseUrl =
+            builder.Configuration["Services:AccommodationBaseUrl"];
+
+        if (!string.IsNullOrWhiteSpace(baseUrl))
+        {
+            client.BaseAddress =
+                new Uri(baseUrl.TrimEnd('/') + "/");
+        }
+
+        client.Timeout = TimeSpan.FromSeconds(5);
+    });
+
 builder.Services.AddQuartz(q =>
 {
     var jobKey = new JobKey("NoticeArchivalJob");

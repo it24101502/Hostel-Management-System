@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NoticeService.DTOs;
 using NoticeService.Repositories;
+using NoticeService.Services;
 
 namespace NoticeService.Controllers;
 
@@ -13,10 +14,39 @@ namespace NoticeService.Controllers;
 public class NoticesController : ControllerBase
 {
     private readonly INoticeRepository _noticeRepository;
+    private readonly IBlockDirectory _blockDirectory;
 
-    public NoticesController(INoticeRepository noticeRepository)
+    public NoticesController(
+        INoticeRepository noticeRepository,
+        IBlockDirectory blockDirectory)
     {
         _noticeRepository = noticeRepository;
+        _blockDirectory = blockDirectory;
+    }
+
+    // Returns an error result if the audience block is unknown,
+    // inactive or cannot be checked; null if the notice may be saved.
+    private async Task<IActionResult?> ValidateBlockAsync(ulong? hostelBlockId)
+    {
+        if (!hostelBlockId.HasValue)
+            return null;
+
+        try
+        {
+            bool isActive = await _blockDirectory.IsActiveBlockAsync(
+                hostelBlockId.Value,
+                Request.Headers.Authorization.ToString());
+
+            return isActive
+                ? null
+                : BadRequest(new { message = $"Hostel block {hostelBlockId} does not exist or is not active." });
+        }
+        catch (BlockDirectoryUnavailableException exception)
+        {
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new { message = exception.Message });
+        }
     }
 
     [HttpPost]
@@ -26,6 +56,10 @@ public class NoticesController : ControllerBase
         var (userId, userRole) = GetActorDetails();
         if (!userId.HasValue || string.IsNullOrEmpty(userRole))
             return Unauthorized(new { message = "Invalid user credentials in token." });
+
+        var blockError = await ValidateBlockAsync(request.HostelBlockId);
+        if (blockError is not null)
+            return blockError;
 
         var notice = await _noticeRepository.CreateAsync(request, userId.Value, userRole);
         return CreatedAtAction(nameof(GetNoticeById), new { id = notice.NoticeId }, notice);
@@ -98,6 +132,10 @@ public class NoticesController : ControllerBase
         var (userId, userRole) = GetActorDetails();
         if (!userId.HasValue || string.IsNullOrEmpty(userRole))
             return Unauthorized(new { message = "Invalid user credentials in token." });
+
+        var blockError = await ValidateBlockAsync(request.HostelBlockId);
+        if (blockError is not null)
+            return blockError;
 
         var updated = await _noticeRepository.UpdateAsync(id, request, userId.Value, userRole);
         if (!updated)

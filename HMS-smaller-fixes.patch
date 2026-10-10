@@ -1,0 +1,891 @@
+diff --git a/backend/AccommodationService/BackgroundServices/StudentDeactivatedConsumer.cs b/backend/AccommodationService/BackgroundServices/StudentDeactivatedConsumer.cs
+index 98f19ed..0b7b869 100644
+--- a/backend/AccommodationService/BackgroundServices/StudentDeactivatedConsumer.cs
++++ b/backend/AccommodationService/BackgroundServices/StudentDeactivatedConsumer.cs
+@@ -28,6 +28,9 @@ public sealed class StudentDeactivatedConsumer
+     protected override async Task ExecuteAsync(
+         CancellationToken stoppingToken)
+     {
++        // Consume() blocks, so let the host finish starting first.
++        await Task.Yield();
++
+         var configuration = new ConsumerConfig
+         {
+             BootstrapServers =
+diff --git a/backend/ComplaintService/Controllers/StaffComplaintsController.cs b/backend/ComplaintService/Controllers/StaffComplaintsController.cs
+index 19164f1..e471f53 100644
+--- a/backend/ComplaintService/Controllers/StaffComplaintsController.cs
++++ b/backend/ComplaintService/Controllers/StaffComplaintsController.cs
+@@ -143,5 +143,11 @@ public class StaffComplaintsController : ControllerBase
+         {
+             return Conflict(new ErrorResponse { Message = exception.Message });
+         }
++        catch (StaffDirectoryUnavailableException exception)
++        {
++            return StatusCode(
++                StatusCodes.Status503ServiceUnavailable,
++                new ErrorResponse { Message = exception.Message });
++        }
+     }
+ }
+\ No newline at end of file
+diff --git a/backend/ComplaintService/Program.cs b/backend/ComplaintService/Program.cs
+index c7f8db6..0de5200 100644
+--- a/backend/ComplaintService/Program.cs
++++ b/backend/ComplaintService/Program.cs
+@@ -92,6 +92,18 @@ builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+ 
+ builder.Services.AddScoped<IComplaintRepository, ComplaintRepository>();
+ builder.Services.AddScoped<IStudentComplaintService, StudentComplaintService>();
++builder.Services.AddHttpContextAccessor();
++builder.Services.AddHttpClient<IStaffDirectory, IdentityStaffDirectory>(client =>
++{
++    string? baseUrl = builder.Configuration["Services:IdentityBaseUrl"];
++
++    if (!string.IsNullOrWhiteSpace(baseUrl))
++    {
++        client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
++    }
++
++    client.Timeout = TimeSpan.FromSeconds(5);
++});
+ builder.Services.AddScoped<IStaffComplaintService, StaffComplaintService>();
+ builder.Services.AddSingleton<INotificationPublisher, KafkaNotificationPublisher>();
+ 
+diff --git a/backend/ComplaintService/Services/IStaffDirectory.cs b/backend/ComplaintService/Services/IStaffDirectory.cs
+new file mode 100644
+index 0000000..9e8be16
+--- /dev/null
++++ b/backend/ComplaintService/Services/IStaffDirectory.cs
+@@ -0,0 +1,27 @@
++namespace ComplaintService.Services;
++
++/// <summary>
++/// Checks staff accounts with IdentityService, the service that
++/// owns user accounts.
++/// </summary>
++public interface IStaffDirectory
++{
++    /// <summary>
++    /// True if the user is an active WARDEN, HOSTEL_MASTER or ADMIN.
++    /// Throws <see cref="StaffDirectoryUnavailableException"/> if
++    /// IdentityService cannot be reached.
++    /// </summary>
++    Task<bool> IsActiveStaffAsync(
++        ulong userId,
++        CancellationToken cancellationToken = default);
++}
++
++public sealed class StaffDirectoryUnavailableException : Exception
++{
++    public StaffDirectoryUnavailableException(
++        string message,
++        Exception? inner = null)
++        : base(message, inner)
++    {
++    }
++}
+diff --git a/backend/ComplaintService/Services/IdentityStaffDirectory.cs b/backend/ComplaintService/Services/IdentityStaffDirectory.cs
+new file mode 100644
+index 0000000..13d53e6
+--- /dev/null
++++ b/backend/ComplaintService/Services/IdentityStaffDirectory.cs
+@@ -0,0 +1,77 @@
++using System.Net;
++using System.Net.Http.Headers;
++
++namespace ComplaintService.Services;
++
++public sealed class IdentityStaffDirectory : IStaffDirectory
++{
++    private readonly HttpClient _httpClient;
++    private readonly IHttpContextAccessor _httpContextAccessor;
++    private readonly ILogger<IdentityStaffDirectory> _logger;
++
++    public IdentityStaffDirectory(
++        HttpClient httpClient,
++        IHttpContextAccessor httpContextAccessor,
++        ILogger<IdentityStaffDirectory> logger)
++    {
++        _httpClient = httpClient;
++        _httpContextAccessor = httpContextAccessor;
++        _logger = logger;
++    }
++
++    public async Task<bool> IsActiveStaffAsync(
++        ulong userId,
++        CancellationToken cancellationToken = default)
++    {
++        if (_httpClient.BaseAddress is null)
++        {
++            throw new StaffDirectoryUnavailableException(
++                "Services:IdentityBaseUrl is not configured.");
++        }
++
++        try
++        {
++            using var request = new HttpRequestMessage(
++                HttpMethod.Get,
++                $"api/staff-directory/{userId}");
++
++            // Forward the caller's own token. The staff directory is
++            // open to every role that can assign complaints.
++            string? authorization =
++                _httpContextAccessor.HttpContext?
++                    .Request.Headers.Authorization.ToString();
++
++            if (AuthenticationHeaderValue.TryParse(
++                    authorization,
++                    out var header))
++            {
++                request.Headers.Authorization = header;
++            }
++
++            using var response = await _httpClient.SendAsync(
++                request,
++                cancellationToken);
++
++            if (response.StatusCode == HttpStatusCode.NotFound)
++            {
++                return false;
++            }
++
++            response.EnsureSuccessStatusCode();
++            return true;
++        }
++        catch (Exception exception) when (
++            exception is HttpRequestException
++                or TaskCanceledException)
++        {
++            _logger.LogWarning(
++                exception,
++                "Could not verify staff user {UserId} with IdentityService.",
++                userId);
++
++            throw new StaffDirectoryUnavailableException(
++                "The staff member could not be verified right now.",
++                exception);
++        }
++    }
++}
+diff --git a/backend/ComplaintService/Services/StaffComplaintService.cs b/backend/ComplaintService/Services/StaffComplaintService.cs
+index ee4fa4a..2cb4704 100644
+--- a/backend/ComplaintService/Services/StaffComplaintService.cs
++++ b/backend/ComplaintService/Services/StaffComplaintService.cs
+@@ -22,14 +22,17 @@ public class StaffComplaintService : IStaffComplaintService
+     private readonly IComplaintRepository _repository;
+     private readonly TimeProvider _timeProvider;
+     private readonly INotificationPublisher _notificationPublisher;
++    private readonly IStaffDirectory _staffDirectory;
+     private readonly ILogger<StaffComplaintService>? _logger;
+ 
+     public StaffComplaintService(
+         IComplaintRepository repository,
+         TimeProvider timeProvider,
+         INotificationPublisher notificationPublisher,
++        IStaffDirectory staffDirectory,
+         ILogger<StaffComplaintService>? logger = null)
+     {
++        _staffDirectory = staffDirectory;
+         _repository = repository;
+         _timeProvider = timeProvider;
+         _notificationPublisher = notificationPublisher;
+@@ -91,6 +94,21 @@ public class StaffComplaintService : IStaffComplaintService
+ 
+         await GetExistingAsync(complaintId);
+ 
++        // The signed-in user is already staff. Anyone else must be
++        // an active warden, hostel master or admin.
++        if (assignee != actorUserId &&
++            !await _staffDirectory.IsActiveStaffAsync(assignee))
++        {
++            throw new ComplaintValidationException(
++                new Dictionary<string, string[]>
++                {
++                    ["assignedToUserId"] = new[]
++                    {
++                        "The selected user is not an active staff member."
++                    }
++                });
++        }
++
+         await _repository.AssignAsync(
+             complaintId,
+             assignee,
+diff --git a/backend/IdentityService/Controllers/RoleProtectedController.cs b/backend/IdentityService/Controllers/RoleProtectedController.cs
+deleted file mode 100644
+index 6512991..0000000
+--- a/backend/IdentityService/Controllers/RoleProtectedController.cs
++++ /dev/null
+@@ -1,39 +0,0 @@
+-using IdentityService.Authorization;
+-using Microsoft.AspNetCore.Mvc;
+-
+-namespace IdentityService.Controllers;
+-
+-[ApiController]
+-[Route("api/protected")]
+-public class RoleProtectedController : ControllerBase
+-{
+-    [HttpGet("admin")]
+-    [RequireRole("ADMIN")]
+-    public IActionResult GetAdminResource()
+-    {
+-        return Ok(new
+-        {
+-            message = "Admin access granted."
+-        });
+-    }
+-
+-    [HttpGet("staff")]
+-    [RequireRole("ADMIN", "WARDEN", "HOSTEL_MASTER")]
+-    public IActionResult GetStaffResource()
+-    {
+-        return Ok(new
+-        {
+-            message = "Staff access granted."
+-        });
+-    }
+-
+-    [HttpGet("student")]
+-    [RequireRole("STUDENT")]
+-    public IActionResult GetStudentResource()
+-    {
+-        return Ok(new
+-        {
+-            message = "Student access granted."
+-        });
+-    }
+-}
+\ No newline at end of file
+diff --git a/backend/IdentityService/Controllers/StaffDirectoryController.cs b/backend/IdentityService/Controllers/StaffDirectoryController.cs
+new file mode 100644
+index 0000000..fb800cd
+--- /dev/null
++++ b/backend/IdentityService/Controllers/StaffDirectoryController.cs
+@@ -0,0 +1,74 @@
++using IdentityService.Authorization;
++using IdentityService.Repositories;
++using Microsoft.AspNetCore.Mvc;
++
++namespace IdentityService.Controllers;
++
++/// <summary>
++/// Lists active staff accounts so other services (for example
++/// ComplaintService) can offer and verify assignees without
++/// reading the users table themselves.
++/// </summary>
++[ApiController]
++[Route("api/staff-directory")]
++[RequireRole("ADMIN", "WARDEN", "HOSTEL_MASTER")]
++public sealed class StaffDirectoryController : ControllerBase
++{
++    private static readonly HashSet<string> StaffRoles =
++        new(StringComparer.OrdinalIgnoreCase)
++        {
++            "ADMIN",
++            "WARDEN",
++            "HOSTEL_MASTER"
++        };
++
++    private readonly IAdminUserRepository _userRepository;
++
++    public StaffDirectoryController(
++        IAdminUserRepository userRepository)
++    {
++        _userRepository = userRepository;
++    }
++
++    [HttpGet]
++    public async Task<IActionResult> GetStaff()
++    {
++        var users = await _userRepository.GetAllAsync();
++
++        return Ok(users
++            .Where(user => user.IsActive &&
++                           StaffRoles.Contains(user.RoleName))
++            .Select(user => new
++            {
++                user.UserId,
++                user.RoleName,
++                user.Username,
++                FullName = $"{user.FirstName} {user.LastName}".Trim()
++            }));
++    }
++
++    // 200 if the user is an active staff member, otherwise 404.
++    [HttpGet("{userId:long}")]
++    public async Task<IActionResult> GetStaffMember(ulong userId)
++    {
++        var user = await _userRepository.GetByIdAsync(userId);
++
++        if (user is null ||
++            !user.IsActive ||
++            !StaffRoles.Contains(user.RoleName))
++        {
++            return NotFound(new
++            {
++                message = $"User {userId} is not an active staff member."
++            });
++        }
++
++        return Ok(new
++        {
++            user.UserId,
++            user.RoleName,
++            user.Username,
++            FullName = $"{user.FirstName} {user.LastName}".Trim()
++        });
++    }
++}
+diff --git a/backend/IdentityService/Controllers/WeatherForecastController.cs b/backend/IdentityService/Controllers/WeatherForecastController.cs
+deleted file mode 100644
+index 2df8e20..0000000
+--- a/backend/IdentityService/Controllers/WeatherForecastController.cs
++++ /dev/null
+@@ -1,25 +0,0 @@
+-using Microsoft.AspNetCore.Mvc;
+-
+-namespace IdentityService.Controllers;
+-
+-[ApiController]
+-[Route("[controller]")]
+-public class WeatherForecastController : ControllerBase
+-{
+-    private static readonly string[] Summaries =
+-    [
+-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+-    ];
+-
+-    [HttpGet(Name = "GetWeatherForecast")]
+-    public IEnumerable<WeatherForecast> Get()
+-    {
+-        return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+-        {
+-            Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+-            TemperatureC = Random.Shared.Next(-20, 55),
+-            Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+-        })
+-        .ToArray();
+-    }
+-}
+diff --git a/backend/IdentityService/IdentityService.http b/backend/IdentityService/IdentityService.http
+deleted file mode 100644
+index f480d31..0000000
+--- a/backend/IdentityService/IdentityService.http
++++ /dev/null
+@@ -1,6 +0,0 @@
+-@IdentityService_HostAddress = http://localhost:5220
+-
+-GET {{IdentityService_HostAddress}}/weatherforecast/
+-Accept: application/json
+-
+-###
+diff --git a/backend/IdentityService/Services/FeeStatusReportService.cs b/backend/IdentityService/Services/FeeStatusReportService.cs
+index b2cae25..2e08d11 100644
+--- a/backend/IdentityService/Services/FeeStatusReportService.cs
++++ b/backend/IdentityService/Services/FeeStatusReportService.cs
+@@ -129,6 +129,22 @@ public class FeeStatusReportService
+     {
+         string safeValue = value ?? string.Empty;
+ 
++        // Stop spreadsheet formula injection (=, +, -, @ at the start).
++        // Genuine numbers (e.g. a negative outstanding amount) are left alone.
++        bool isNumber =
++            decimal.TryParse(
++                safeValue,
++                NumberStyles.Number,
++                CultureInfo.InvariantCulture,
++                out _);
++
++        if (!isNumber &&
++            safeValue.Length > 0 &&
++            "=+-@\t\r".Contains(safeValue[0]))
++        {
++            safeValue = "'" + safeValue;
++        }
++
+         bool requiresQuotes =
+             safeValue.Contains(',') ||
+             safeValue.Contains('"') ||
+diff --git a/backend/IdentityService/WeatherForecast.cs b/backend/IdentityService/WeatherForecast.cs
+deleted file mode 100644
+index 375409c..0000000
+--- a/backend/IdentityService/WeatherForecast.cs
++++ /dev/null
+@@ -1,12 +0,0 @@
+-namespace IdentityService;
+-
+-public class WeatherForecast
+-{
+-    public DateOnly Date { get; set; }
+-
+-    public int TemperatureC { get; set; }
+-
+-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+-
+-    public string? Summary { get; set; }
+-}
+diff --git a/backend/LeaveService/Events/KafkaLeaveEventPublisher.cs b/backend/LeaveService/Events/KafkaLeaveEventPublisher.cs
+index 3104d74..d3c228a 100644
+--- a/backend/LeaveService/Events/KafkaLeaveEventPublisher.cs
++++ b/backend/LeaveService/Events/KafkaLeaveEventPublisher.cs
+@@ -50,7 +50,7 @@ public sealed class KafkaLeaveEventPublisher
+             // queue. The delivery handler runs later, when Kafka
+             // confirms or rejects the message.
+             _producer.Produce(
+-                _options.LeaveRequestedTopic,
++                ResolveTopic(eventMessage.EventType),
+                 new Message<string, string>
+                 {
+                     // Keying by request keeps every event of one
+@@ -90,6 +90,22 @@ public sealed class KafkaLeaveEventPublisher
+         return Task.CompletedTask;
+     }
+ 
++    // Each kind of event goes to its own topic so consumers can
++    // subscribe to only what they need. Rejections, departures
++    // and returns have no dedicated topic and use the general
++    // leave-events topic.
++    private string ResolveTopic(string eventType) =>
++        eventType switch
++        {
++            LeaveEventTypes.RequestSubmitted =>
++                _options.LeaveRequestedTopic,
++            LeaveEventTypes.RequestApproved =>
++                _options.LeaveApprovedTopic,
++            LeaveEventTypes.ReturnOverdue =>
++                _options.LeaveOverdueTopic,
++            _ => _options.LeaveEventsTopic
++        };
++
+     public void Dispose()
+     {
+         _producer.Flush(TimeSpan.FromSeconds(5));
+diff --git a/backend/NoticeService/Controllers/NoticesController.cs b/backend/NoticeService/Controllers/NoticesController.cs
+index 07a8092..921af27 100644
+--- a/backend/NoticeService/Controllers/NoticesController.cs
++++ b/backend/NoticeService/Controllers/NoticesController.cs
+@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
+ using Microsoft.AspNetCore.Mvc;
+ using NoticeService.DTOs;
+ using NoticeService.Repositories;
++using NoticeService.Services;
+ 
+ namespace NoticeService.Controllers;
+ 
+@@ -13,10 +14,39 @@ namespace NoticeService.Controllers;
+ public class NoticesController : ControllerBase
+ {
+     private readonly INoticeRepository _noticeRepository;
++    private readonly IBlockDirectory _blockDirectory;
+ 
+-    public NoticesController(INoticeRepository noticeRepository)
++    public NoticesController(
++        INoticeRepository noticeRepository,
++        IBlockDirectory blockDirectory)
+     {
+         _noticeRepository = noticeRepository;
++        _blockDirectory = blockDirectory;
++    }
++
++    // Returns an error result if the audience block is unknown,
++    // inactive or cannot be checked; null if the notice may be saved.
++    private async Task<IActionResult?> ValidateBlockAsync(ulong? hostelBlockId)
++    {
++        if (!hostelBlockId.HasValue)
++            return null;
++
++        try
++        {
++            bool isActive = await _blockDirectory.IsActiveBlockAsync(
++                hostelBlockId.Value,
++                Request.Headers.Authorization.ToString());
++
++            return isActive
++                ? null
++                : BadRequest(new { message = $"Hostel block {hostelBlockId} does not exist or is not active." });
++        }
++        catch (BlockDirectoryUnavailableException exception)
++        {
++            return StatusCode(
++                StatusCodes.Status503ServiceUnavailable,
++                new { message = exception.Message });
++        }
+     }
+ 
+     [HttpPost]
+@@ -27,6 +57,10 @@ public class NoticesController : ControllerBase
+         if (!userId.HasValue || string.IsNullOrEmpty(userRole))
+             return Unauthorized(new { message = "Invalid user credentials in token." });
+ 
++        var blockError = await ValidateBlockAsync(request.HostelBlockId);
++        if (blockError is not null)
++            return blockError;
++
+         var notice = await _noticeRepository.CreateAsync(request, userId.Value, userRole);
+         return CreatedAtAction(nameof(GetNoticeById), new { id = notice.NoticeId }, notice);
+     }
+@@ -99,6 +133,10 @@ public class NoticesController : ControllerBase
+         if (!userId.HasValue || string.IsNullOrEmpty(userRole))
+             return Unauthorized(new { message = "Invalid user credentials in token." });
+ 
++        var blockError = await ValidateBlockAsync(request.HostelBlockId);
++        if (blockError is not null)
++            return blockError;
++
+         var updated = await _noticeRepository.UpdateAsync(id, request, userId.Value, userRole);
+         if (!updated)
+             return NotFound(new { message = $"Notice {id} not found." });
+diff --git a/backend/NoticeService/Program.cs b/backend/NoticeService/Program.cs
+index b040f7c..6921aee 100644
+--- a/backend/NoticeService/Program.cs
++++ b/backend/NoticeService/Program.cs
+@@ -18,6 +18,21 @@ builder.Services.AddControllers();
+ builder.Services.AddScoped<IDateTimeProvider, SystemDateTimeProvider>();
+ builder.Services.AddScoped<INoticeRepository, NoticeRepository>();
+ 
++builder.Services.AddHttpClient<IBlockDirectory, AccommodationBlockDirectory>(
++    client =>
++    {
++        string? baseUrl =
++            builder.Configuration["Services:AccommodationBaseUrl"];
++
++        if (!string.IsNullOrWhiteSpace(baseUrl))
++        {
++            client.BaseAddress =
++                new Uri(baseUrl.TrimEnd('/') + "/");
++        }
++
++        client.Timeout = TimeSpan.FromSeconds(5);
++    });
++
+ builder.Services.AddQuartz(q =>
+ {
+     var jobKey = new JobKey("NoticeArchivalJob");
+diff --git a/backend/NoticeService/Repositories/NoticeRepository.cs b/backend/NoticeService/Repositories/NoticeRepository.cs
+index c4f28fc..c4280ab 100644
+--- a/backend/NoticeService/Repositories/NoticeRepository.cs
++++ b/backend/NoticeService/Repositories/NoticeRepository.cs
+@@ -106,7 +106,11 @@ public class NoticeRepository : INoticeRepository
+                 content = @Content,
+                 notice_type = UPPER(@NoticeType),
+                 hostel_block_id = @HostelBlockId,
+-                expiry_date = @ExpiryDate
++                expiry_date = @ExpiryDate,
++                -- A valid expiry date is never in the past, so saving
++                -- an archived notice republishes it.
++                is_archived = IF(@ExpiryDate >= UTC_DATE(), FALSE, is_archived),
++                archived_at = IF(@ExpiryDate >= UTC_DATE(), NULL, archived_at)
+             WHERE notice_id = @NoticeId;";
+ 
+         var affectedRows = await connection.ExecuteAsync(updateNoticeSql, new
+diff --git a/backend/NoticeService/Services/AccommodationBlockDirectory.cs b/backend/NoticeService/Services/AccommodationBlockDirectory.cs
+new file mode 100644
+index 0000000..99f6dfb
+--- /dev/null
++++ b/backend/NoticeService/Services/AccommodationBlockDirectory.cs
+@@ -0,0 +1,86 @@
++using System.Net.Http.Headers;
++using System.Text.Json;
++
++namespace NoticeService.Services;
++
++public sealed class AccommodationBlockDirectory : IBlockDirectory
++{
++    private readonly HttpClient _httpClient;
++    private readonly ILogger<AccommodationBlockDirectory> _logger;
++
++    public AccommodationBlockDirectory(
++        HttpClient httpClient,
++        ILogger<AccommodationBlockDirectory> logger)
++    {
++        _httpClient = httpClient;
++        _logger = logger;
++    }
++
++    public async Task<bool> IsActiveBlockAsync(
++        ulong blockId,
++        string? authorizationHeader,
++        CancellationToken cancellationToken = default)
++    {
++        if (_httpClient.BaseAddress is null)
++        {
++            throw new BlockDirectoryUnavailableException(
++                "Services:AccommodationBaseUrl is not configured.");
++        }
++
++        try
++        {
++            using var request = new HttpRequestMessage(
++                HttpMethod.Get,
++                "api/admin/blocks");
++
++            // Forward the caller's own token: the blocks endpoint
++            // already allows WARDEN, HOSTEL_MASTER and ADMIN.
++            if (AuthenticationHeaderValue.TryParse(
++                    authorizationHeader,
++                    out var header))
++            {
++                request.Headers.Authorization = header;
++            }
++
++            using var response = await _httpClient.SendAsync(
++                request,
++                cancellationToken);
++
++            response.EnsureSuccessStatusCode();
++
++            await using var body =
++                await response.Content.ReadAsStreamAsync(
++                    cancellationToken);
++
++            using var document = await JsonDocument.ParseAsync(
++                body,
++                cancellationToken: cancellationToken);
++
++            foreach (var block in document.RootElement.EnumerateArray())
++            {
++                if (block.TryGetProperty("blockId", out var id) &&
++                    id.TryGetUInt64(out ulong value) &&
++                    value == blockId)
++                {
++                    return true;
++                }
++            }
++
++            return false;
++        }
++        catch (Exception exception) when (
++            exception is HttpRequestException
++                or TaskCanceledException
++                or JsonException
++                or InvalidOperationException)
++        {
++            _logger.LogWarning(
++                exception,
++                "Could not load hostel blocks from AccommodationService.");
++
++            throw new BlockDirectoryUnavailableException(
++                "Hostel blocks could not be verified right now.",
++                exception);
++        }
++    }
++}
+diff --git a/backend/NoticeService/Services/IBlockDirectory.cs b/backend/NoticeService/Services/IBlockDirectory.cs
+new file mode 100644
+index 0000000..051e73c
+--- /dev/null
++++ b/backend/NoticeService/Services/IBlockDirectory.cs
+@@ -0,0 +1,28 @@
++namespace NoticeService.Services;
++
++/// <summary>
++/// Checks hostel block IDs against AccommodationService, the
++/// service that owns hostel blocks.
++/// </summary>
++public interface IBlockDirectory
++{
++    /// <summary>
++    /// True if the block exists and is active. Throws
++    /// <see cref="BlockDirectoryUnavailableException"/> when the
++    /// block list cannot be loaded.
++    /// </summary>
++    Task<bool> IsActiveBlockAsync(
++        ulong blockId,
++        string? authorizationHeader,
++        CancellationToken cancellationToken = default);
++}
++
++public sealed class BlockDirectoryUnavailableException : Exception
++{
++    public BlockDirectoryUnavailableException(
++        string message,
++        Exception? inner = null)
++        : base(message, inner)
++    {
++    }
++}
+diff --git a/compose.yml b/compose.yml
+index 539bc46..22d0371 100644
+--- a/compose.yml
++++ b/compose.yml
+@@ -93,6 +93,7 @@ services:
+       - |
+         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic student-deactivated --partitions 1 --replication-factor 1
+         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic student-allocation-changed --partitions 1 --replication-factor 1
++        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-events --partitions 1 --replication-factor 1
+         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-requested --partitions 1 --replication-factor 1
+         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-approved --partitions 1 --replication-factor 1
+         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-overdue --partitions 1 --replication-factor 1
+@@ -194,6 +195,7 @@ services:
+       Kafka__ConsumerGroupId: "complaint-service"
+       Kafka__ComplaintSubmittedTopic: "complaint-submitted"
+       Kafka__ComplaintUpdatedTopic: "complaint-updated"
++      Services__IdentityBaseUrl: "http://identity-api:8080"
+     ports:
+       - "8083:8080"
+     depends_on:
+@@ -214,6 +216,7 @@ services:
+       ASPNETCORE_URLS: http://+:8080
+       Jwt__Key: ${JWT_KEY}
+       ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Notice_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
++      Services__AccommodationBaseUrl: "http://accommodation-api:8080"
+     ports:
+       - "8084:8080"
+     depends_on:
+diff --git a/frontend/src/ComplaintDialogs.jsx b/frontend/src/ComplaintDialogs.jsx
+index bfb829b..9d84b3d 100644
+--- a/frontend/src/ComplaintDialogs.jsx
++++ b/frontend/src/ComplaintDialogs.jsx
+@@ -1,6 +1,9 @@
+-import { useState } from "react";
++import { useEffect, useState } from "react";
+ 
+-import { ComplaintApiError } from "./complaintApi.js";
++import {
++  ComplaintApiError,
++  getStaffDirectory
++} from "./complaintApi.js";
+ 
+ import {
+   categoryLabels,
+@@ -21,6 +24,25 @@ export function ComplaintAssignDialog({
+     useState("");
+   const [isSubmitting, setIsSubmitting] =
+     useState(false);
++  const [staff, setStaff] = useState([]);
++  const [staffFailed, setStaffFailed] =
++    useState(false);
++
++  useEffect(() => {
++    let cancelled = false;
++
++    getStaffDirectory()
++      .then((list) => {
++        if (!cancelled) setStaff(list);
++      })
++      .catch(() => {
++        if (!cancelled) setStaffFailed(true);
++      });
++
++    return () => {
++      cancelled = true;
++    };
++  }, []);
+ 
+   async function handleSubmit(event) {
+     event.preventDefault();
+@@ -28,13 +50,6 @@ export function ComplaintAssignDialog({
+ 
+     const trimmed = assigneeId.trim();
+ 
+-    if (trimmed && !/^[1-9]\d*$/.test(trimmed)) {
+-      setError(
+-        "Enter a valid staff user ID, or leave it blank to assign the complaint to yourself."
+-      );
+-      return;
+-    }
+-
+     setIsSubmitting(true);
+ 
+     try {
+@@ -99,21 +114,38 @@ export function ComplaintAssignDialog({
+         >
+           <div className="form-group">
+             <label htmlFor="complaintAssignee">
+-              Staff user ID (optional)
++              Assign to
+             </label>
+ 
+-            <input
++            <select
+               id="complaintAssignee"
+-              type="text"
+-              inputMode="numeric"
+               value={assigneeId}
+               onChange={(event) => {
+                 setAssigneeId(event.target.value);
+                 setError("");
+               }}
+               aria-invalid={Boolean(error)}
+-              placeholder="Leave blank to assign to yourself"
+-            />
++            >
++              <option value="">Myself</option>
++              {staff.map((member) => (
++                <option
++                  key={member.userId}
++                  value={member.userId}
++                >
++                  {member.fullName || member.username}
++                  {" · "}
++                  {member.roleName}
++                </option>
++              ))}
++            </select>
++
++            {staffFailed && (
++              <p className="field-error">
++                The staff list could not be loaded. You
++                can still assign the complaint to
++                yourself.
++              </p>
++            )}
+ 
+             {error && (
+               <p className="field-error">{error}</p>
+diff --git a/frontend/src/StudentProfilePage.jsx b/frontend/src/StudentProfilePage.jsx
+index 528e34c..fb0f517 100644
+--- a/frontend/src/StudentProfilePage.jsx
++++ b/frontend/src/StudentProfilePage.jsx
+@@ -46,6 +46,11 @@ function StudentProfilePage() {
+   const [photoLoadFailed, setPhotoLoadFailed] =
+   useState(false);
+ 
++  // A new photo URL (after an upload) gets a fresh chance to load.
++  useEffect(() => {
++    setPhotoLoadFailed(false);
++  }, [profile?.profilePhotoUrl]);
++
+   useEffect(() => {
+     const role =
+       sessionStorage.getItem("userRole");
+diff --git a/frontend/src/complaintApi.js b/frontend/src/complaintApi.js
+index 813f9df..533f408 100644
+--- a/frontend/src/complaintApi.js
++++ b/frontend/src/complaintApi.js
+@@ -163,6 +163,33 @@ export function getComplaintReport(filters = {}) {
+   );
+ }
+ 
++const IDENTITY_API_BASE_URL =
++  import.meta.env.VITE_API_BASE_URL ??
++  "http://localhost:5220";
++
++// Active staff who can be given a complaint.
++export async function getStaffDirectory() {
++  const response = await fetch(
++    `${IDENTITY_API_BASE_URL}/api/staff-directory`,
++    {
++      headers: {
++        Authorization: `Bearer ${sessionStorage.getItem(
++          "accessToken"
++        )}`
++      }
++    }
++  );
++
++  if (!response.ok) {
++    throw new ComplaintApiError(
++      "The staff list could not be loaded.",
++      response.status
++    );
++  }
++
++  return response.json();
++}
++
+ // assignedToUserId = null assigns the complaint to the caller.
+ export function assignComplaint(complaintId, assignedToUserId) {
+   return sendComplaintRequest(

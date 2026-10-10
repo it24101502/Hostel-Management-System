@@ -5,23 +5,24 @@ using Moq;
 using NoticeService.Controllers;
 using NoticeService.DTOs;
 using NoticeService.Repositories;
+using NoticeService.Services;
 using Xunit;
 
 namespace NoticeService.Tests;
 
-/// <summary>
-/// Covers the controller paths NoticesControllerTests does not: invalid
-/// tokens, missing notices, role normalising, archived listing and the
-/// block claim parsing.
-/// </summary>
 public class NoticesControllerBehaviourTests
 {
     private readonly Mock<INoticeRepository> _repository = new();
+    private readonly Mock<IBlockDirectory> _blockDirectory = new();
     private readonly NoticesController _controller;
 
     public NoticesControllerBehaviourTests()
     {
-        _controller = new NoticesController(_repository.Object);
+        _blockDirectory
+            .Setup(b => b.IsActiveBlockAsync(It.IsAny<ulong>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _controller = new NoticesController(_repository.Object, _blockDirectory.Object);
     }
 
     private void SignIn(params Claim[] claims)
@@ -50,8 +51,6 @@ public class NoticesControllerBehaviourTests
 
     private static UpdateNoticeRequest UpdateRequest() =>
         new("Title", "Content", "NOTICE", null, Tomorrow);
-
-    // ---------- create ----------
 
     [Fact]
     public async Task CreateNotice_WithoutAnyClaims_ReturnsUnauthorizedAndSavesNothing()
@@ -137,8 +136,6 @@ public class NoticesControllerBehaviourTests
         Assert.Same(created, createdAt.Value);
     }
 
-    // ---------- list ----------
-
     [Fact]
     public async Task GetAllNotices_ByDefault_ExcludesArchivedNotices()
     {
@@ -170,8 +167,6 @@ public class NoticesControllerBehaviourTests
         _repository.Verify(r => r.GetAllAsync(true), Times.Once);
     }
 
-    // ---------- get by id ----------
-
     [Fact]
     public async Task GetNoticeById_WhenItExists_ReturnsIt()
     {
@@ -184,8 +179,6 @@ public class NoticesControllerBehaviourTests
         var ok = Assert.IsType<OkObjectResult>(result);
         Assert.Same(notice, ok.Value);
     }
-
-    // ---------- update ----------
 
     [Fact]
     public async Task UpdateNotice_WithoutAnyClaims_ReturnsUnauthorizedAndUpdatesNothing()
@@ -242,8 +235,6 @@ public class NoticesControllerBehaviourTests
         Assert.Same(updated, ok.Value);
     }
 
-    // ---------- delete ----------
-
     [Fact]
     public async Task DeleteNotice_WithoutAnyClaims_ReturnsUnauthorizedAndDeletesNothing()
     {
@@ -274,8 +265,6 @@ public class NoticesControllerBehaviourTests
 
         Assert.IsType<NotFoundObjectResult>(result);
     }
-
-    // ---------- student view ----------
 
     [Fact]
     public async Task GetMyNotices_WithANonNumericBlockClaim_FallsBackToGeneralNotices()
