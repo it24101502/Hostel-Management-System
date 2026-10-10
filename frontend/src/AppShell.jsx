@@ -8,7 +8,10 @@ const navigationByRole = {
     { key: "allocations", label: "Allocations", href: "/admin/allocations", icon: "allocations" },
     { key: "leave", label: "Leave report", href: "/admin/leave", icon: "leave" },
     { key: "complaints", label: "Complaints", href: "/admin/complaints", icon: "complaints" },
-    { key: "notices", label: "Notices", href: "/admin/notices", icon: "notices" }
+    { key: "notices", label: "Notices", href: "/admin/notices", icon: "notices" },
+    { key: "fees", label: "Fees", href: "/admin/fees", icon: "fees" },
+    { key: "contacts", label: "Contacts", href: "/admin/contacts", icon: "contacts" },
+    { key: "audit", label: "Audit log", href: "/admin/audit-logs", icon: "audit" }
   ],
   STUDENT: [
     { key: "dashboard", label: "Dashboard", href: "/student", icon: "dashboard" },
@@ -16,19 +19,22 @@ const navigationByRole = {
     { key: "leave", label: "Leave requests", href: "/student/leave", icon: "leave" },
     { key: "fees", label: "Fees", href: "/student/fees", icon: "fees" },
     { key: "complaints", label: "Complaints", href: "/student/complaints", icon: "complaints" },
-    { key: "notices", label: "Notices", href: "/student/notices", icon: "notices" }
+    { key: "notices", label: "Notices", href: "/student/notices", icon: "notices" },
+    { key: "contacts", label: "Contacts", href: "/student/contacts", icon: "contacts" }
   ],
   WARDEN: [
     { key: "dashboard", label: "Dashboard", href: "/warden", icon: "dashboard" },
     { key: "leave", label: "Leave requests", href: "/warden/leave", icon: "leave" },
     { key: "complaints", label: "Complaints", href: "/warden/complaints", icon: "complaints" },
-    { key: "notices", label: "Notices", href: "/warden/notices", icon: "notices" }
+    { key: "notices", label: "Notices", href: "/warden/notices", icon: "notices" },
+    { key: "contacts", label: "Contacts", href: "/warden/contacts", icon: "contacts" }
   ],
   HOSTEL_MASTER: [
     { key: "dashboard", label: "Dashboard", href: "/hostel-master", icon: "dashboard" },
     { key: "leave", label: "Leave requests", href: "/hostel-master/leave", icon: "leave" },
     { key: "complaints", label: "Complaints", href: "/hostel-master/complaints", icon: "complaints" },
-    { key: "notices", label: "Notices", href: "/hostel-master/notices", icon: "notices" }
+    { key: "notices", label: "Notices", href: "/hostel-master/notices", icon: "notices" },
+    { key: "contacts", label: "Contacts", href: "/hostel-master/contacts", icon: "contacts" }
   ]
 };
 
@@ -97,6 +103,17 @@ function NavIcon({ name }) {
       <>
         <path d="M4 11v2a1 1 0 0 0 1 1h2l5 4V6L7 10H5a1 1 0 0 0-1 1z" />
         <path d="M16 8a5 5 0 0 1 0 8" />
+      </>
+    ),
+    contacts: (
+      <>
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+      </>
+    ),
+    audit: (
+      <>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <path d="M9 12l2 2 4-4" />
       </>
     ),
     fees: (

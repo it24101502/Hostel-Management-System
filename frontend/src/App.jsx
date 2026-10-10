@@ -12,6 +12,9 @@ import StaffComplaintsPage from "./StaffComplaintsPage.jsx";
 import StudentNoticesPage from "./StudentNoticesPage.jsx";
 import StaffNoticesPage from "./StaffNoticesPage.jsx";
 import StudentFeesPage from "./StudentFeesPage.jsx";
+import AdminFeesPage from "./AdminFeesPage.jsx";
+import AdminAuditLogPage from "./AdminAuditLogPage.jsx";
+import ContactsPage from "./ContactsPage.jsx";
 
 const landingPageRoles = {
   "/student": "STUDENT",
@@ -348,6 +351,23 @@ function App() {
     "/student/fees"
   ) {
     return <StudentFeesPage />;
+  }
+
+  if (window.location.pathname === "/admin/fees") {
+    return <AdminFeesPage />;
+  }
+
+  if (window.location.pathname === "/admin/audit-logs") {
+    return <AdminAuditLogPage />;
+  }
+
+  if (
+    window.location.pathname === "/student/contacts" ||
+    window.location.pathname === "/warden/contacts" ||
+    window.location.pathname === "/hostel-master/contacts" ||
+    window.location.pathname === "/admin/contacts"
+  ) {
+    return <ContactsPage />;
   }
 
   if (

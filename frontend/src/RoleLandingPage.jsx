@@ -57,6 +57,27 @@ const modulesByRole = {
       description: "Publish notices and schedules for hostel blocks.",
       href: "/admin/notices",
       accent: "violet"
+    },
+    {
+      number: "07",
+      title: "Fees",
+      description: "Issue invoices, record payments and download the fee report.",
+      href: "/admin/fees",
+      accent: "cyan"
+    },
+    {
+      number: "08",
+      title: "Guardian contacts",
+      description: "View and edit students' guardian and emergency contacts.",
+      href: "/admin/contacts",
+      accent: "indigo"
+    },
+    {
+      number: "09",
+      title: "Login audit log",
+      description: "Review recent sign-in attempts and failed logins.",
+      href: "/admin/audit-logs",
+      accent: "violet"
     }
   ],
   STUDENT: [
@@ -94,6 +115,13 @@ const modulesByRole = {
       description: "See overdue hostel fees that need your attention.",
       href: "/student/fees",
       accent: "cyan"
+    },
+    {
+      number: "06",
+      title: "Emergency contacts",
+      description: "Keep your guardian and emergency contacts up to date.",
+      href: "/student/contacts",
+      accent: "violet"
     }
   ],
   WARDEN: [
@@ -117,6 +145,13 @@ const modulesByRole = {
       description: "Publish notices and schedules for hostel blocks.",
       href: "/warden/notices",
       accent: "violet"
+    },
+    {
+      number: "04",
+      title: "Guardian contacts",
+      description: "View students' guardian and emergency contacts.",
+      href: "/warden/contacts",
+      accent: "indigo"
     }
   ],
   HOSTEL_MASTER: [
@@ -140,6 +175,13 @@ const modulesByRole = {
       description: "Publish notices and schedules for hostel blocks.",
       href: "/hostel-master/notices",
       accent: "violet"
+    },
+    {
+      number: "04",
+      title: "Guardian contacts",
+      description: "View students' guardian and emergency contacts.",
+      href: "/hostel-master/contacts",
+      accent: "indigo"
     }
   ]
 };
