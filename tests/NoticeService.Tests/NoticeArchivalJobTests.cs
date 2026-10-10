@@ -5,7 +5,6 @@ using NoticeService.Repositories;
 using NoticeService.Services;
 using Quartz;
 using Xunit;
-
 namespace NoticeService.Tests;
 
 public class NoticeArchivalJobTests
