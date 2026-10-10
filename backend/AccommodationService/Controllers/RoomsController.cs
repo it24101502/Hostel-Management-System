@@ -137,6 +137,13 @@ public class RoomsController : ControllerBase
             Message = exception.Message
             });
         }
+        catch (RoomCapacityBelowOccupancyException exception)
+        {
+            return Conflict(new ErrorResponse
+            {
+                Message = exception.Message
+            });
+        }
     }
 
     [HttpDelete("{roomId:long}")]

@@ -1,8 +1,8 @@
 ﻿using AccommodationService.DTOs;
+using AccommodationService.Exceptions;
 using AccommodationService.Models;
 using AccommodationService.Repositories;
 using AccommodationService.Services;
-using AccommodationService.Exceptions;
 
 namespace AccommodationService.Tests;
 
@@ -229,8 +229,8 @@ public class RoomServiceTests
     {
         var repository = new FakeRoomRepository();
         var service = new RoomService(
-                          repository,
-                          new FakeRoomAuditRepository());
+                        repository,
+                        new FakeRoomAuditRepository());
 
         var request = new CreateRoomRequest
         {
@@ -329,6 +329,11 @@ public class RoomServiceTests
 
         public bool HasActiveOccupants { get; set; }
 
+        public int Occupancy { get; set; }
+
+        public Task<int> GetOccupancyAsync(ulong roomId) =>
+            Task.FromResult(Occupancy);
+
         public Task<IReadOnlyList<HostelRoom>> GetAllAsync()
         {
             IReadOnlyList<HostelRoom> result = Rooms;
@@ -423,4 +428,3 @@ public class RoomServiceTests
         }
     }
 }
-

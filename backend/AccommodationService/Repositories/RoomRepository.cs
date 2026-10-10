@@ -299,6 +299,29 @@ public class RoomRepository : IRoomRepository
         return affectedRows > 0;
     }
 
+    public async Task<int> GetOccupancyAsync(ulong roomId)
+    {
+        const string query = """
+            SELECT COUNT(*)
+            FROM student_room_allocations
+            WHERE room_id = @roomId;
+            """;
+
+        await using var connection =
+            new MySqlConnection(_connectionString);
+
+        await connection.OpenAsync();
+
+        await using var command =
+            new MySqlCommand(query, connection);
+
+        command.Parameters.AddWithValue("@roomId", roomId);
+
+        object? result = await command.ExecuteScalarAsync();
+
+        return Convert.ToInt32(result);
+    }
+
     private static HostelRoom MapRoom(MySqlDataReader reader)
     {
         return new HostelRoom

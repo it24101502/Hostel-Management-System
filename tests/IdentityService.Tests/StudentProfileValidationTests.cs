@@ -401,9 +401,6 @@ public class StudentProfileValidationTests
             profile.PostalCode =
                 request.PostalCode;
 
-            profile.ProfilePhotoUrl =
-                request.ProfilePhotoUrl;
-
             profile.UpdatedAt =
                 DateTime.UtcNow;
 

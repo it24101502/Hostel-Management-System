@@ -21,9 +21,6 @@ public class UpdateOwnStudentProfileRequest
     [MaxLength(20)]
     public string? PostalCode { get; set; }
 
-    [MaxLength(500)]
-    public string? ProfilePhotoUrl { get; set; }
-
     [JsonExtensionData]
     public Dictionary<string, JsonElement>
         AdditionalFields { get; set; } =

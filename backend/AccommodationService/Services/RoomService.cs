@@ -81,6 +81,13 @@ public class RoomService : IRoomService
             return null;
         }
 
+        int occupancy = await _roomRepository.GetOccupancyAsync(roomId);
+
+        if (request.BedCapacity < occupancy)
+        {
+            throw new RoomCapacityBelowOccupancyException(occupancy);
+        }
+
         await EnsureBlockExistsAsync(request.BlockId);
 
         await EnsureLocationIsUniqueAsync(
