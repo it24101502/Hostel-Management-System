@@ -12,6 +12,9 @@ namespace IdentityService.Services;
 
 public sealed class JwtTokenService : IJwtTokenService
 {
+    // Read by NoticeService to show a student their block's notices.
+    public const string HostelBlockClaimType = "hostel_block_id";
+
     private readonly JwtOptions _jwtOptions;
 
     public JwtTokenService(
@@ -52,25 +55,33 @@ public sealed class JwtTokenService : IJwtTokenService
         DateTime expiresAt = issuedAt.AddMinutes(
             _jwtOptions.ExpiryMinutes);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(
+            new(
                 JwtRegisteredClaimNames.Sub,
                 user.UserId.ToString(
                     CultureInfo.InvariantCulture)),
 
-            new Claim(
+            new(
                 JwtRegisteredClaimNames.UniqueName,
                 user.Username),
 
-            new Claim(
+            new(
                 ClaimTypes.Role,
                 user.RoleName),
 
-            new Claim(
+            new(
                 JwtRegisteredClaimNames.Jti,
                 Guid.NewGuid().ToString())
         };
+
+        if (user.HostelBlockId.HasValue)
+        {
+            claims.Add(new Claim(
+                HostelBlockClaimType,
+                user.HostelBlockId.Value.ToString(
+                    CultureInfo.InvariantCulture)));
+        }
 
         var signingKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(_jwtOptions.Key));

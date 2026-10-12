@@ -46,6 +46,11 @@ function StudentProfilePage() {
   const [photoLoadFailed, setPhotoLoadFailed] =
   useState(false);
 
+  // A new photo URL (after an upload) gets a fresh chance to load.
+  useEffect(() => {
+    setPhotoLoadFailed(false);
+  }, [profile?.profilePhotoUrl]);
+
   useEffect(() => {
     const role =
       sessionStorage.getItem("userRole");

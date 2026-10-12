@@ -28,6 +28,9 @@ public sealed class StudentDeactivatedConsumer
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
+        // Consume() blocks, so let the host finish starting first.
+        await Task.Yield();
+
         var configuration = new ConsumerConfig
         {
             BootstrapServers =

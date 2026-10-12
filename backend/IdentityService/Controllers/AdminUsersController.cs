@@ -17,14 +17,18 @@ public class AdminUsersController : ControllerBase
     private readonly IStudentProfileService _profileService;
     private readonly IEventPublisher _eventPublisher;
 
+    private readonly ILogger<AdminUsersController> _logger;
+
     public AdminUsersController(
         IAdminUserService adminUserService,
         IStudentProfileService profileService,
-        IEventPublisher eventPublisher)
+        IEventPublisher eventPublisher,
+        ILogger<AdminUsersController> logger)
     {
         _adminUserService = adminUserService;
         _profileService = profileService;
         _eventPublisher = eventPublisher;
+        _logger = logger;
     }
 
     // CREATE: POST /api/admin/users
@@ -185,10 +189,22 @@ public class AdminUsersController : ControllerBase
                     administratorUserId,
                     DateTimeOffset.UtcNow);
 
-            await _eventPublisher
-                .PublishStudentDeactivatedAsync(
-                    eventMessage,
-                    cancellationToken);
+            try
+            {
+                await _eventPublisher
+                    .PublishStudentDeactivatedAsync(
+                        eventMessage,
+                        cancellationToken);
+            }
+            catch (Exception exception)
+                when (exception is not OperationCanceledException)
+            {
+                // The account is already deactivated in MySQL.
+                _logger.LogError(
+                    exception,
+                    "Student {UserId} was deactivated but the event could not be published; their room allocation was not released.",
+                    userId);
+            }
         }
 
         return Ok(new
