@@ -22,14 +22,17 @@ public class StaffComplaintService : IStaffComplaintService
     private readonly IComplaintRepository _repository;
     private readonly TimeProvider _timeProvider;
     private readonly INotificationPublisher _notificationPublisher;
+    private readonly IStaffDirectory _staffDirectory;
     private readonly ILogger<StaffComplaintService>? _logger;
 
     public StaffComplaintService(
         IComplaintRepository repository,
         TimeProvider timeProvider,
         INotificationPublisher notificationPublisher,
+        IStaffDirectory staffDirectory,
         ILogger<StaffComplaintService>? logger = null)
     {
+        _staffDirectory = staffDirectory;
         _repository = repository;
         _timeProvider = timeProvider;
         _notificationPublisher = notificationPublisher;
@@ -90,6 +93,21 @@ public class StaffComplaintService : IStaffComplaintService
         }
 
         await GetExistingAsync(complaintId);
+
+        // The signed-in user is already staff. Anyone else must be
+        // an active warden, hostel master or admin.
+        if (assignee != actorUserId &&
+            !await _staffDirectory.IsActiveStaffAsync(assignee))
+        {
+            throw new ComplaintValidationException(
+                new Dictionary<string, string[]>
+                {
+                    ["assignedToUserId"] = new[]
+                    {
+                        "The selected user is not an active staff member."
+                    }
+                });
+        }
 
         await _repository.AssignAsync(
             complaintId,

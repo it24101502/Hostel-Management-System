@@ -1,0 +1,148 @@
+/* Extras for the fee, audit log and contacts pages. They reuse the
+   admin table, dialog and form styles from styles.css. */
+
+.status-badge.paid {
+  color: #087a47;
+  background: #dff8eb;
+}
+
+.status-badge.unpaid {
+  color: #92600a;
+  background: #fff4d6;
+}
+
+.status-badge.overdue,
+.status-badge.failure {
+  color: #b42318;
+  background: #fee9e7;
+}
+
+.status-badge.success {
+  color: #087a47;
+  background: #dff8eb;
+}
+
+.tools-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.tools-filters .form-group {
+  min-width: 200px;
+  margin: 0;
+}
+
+.tools-filters select,
+.tools-dialog-form select,
+.tools-dialog-form input,
+.tools-dialog-form textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  color: #101828;
+  background: #ffffff;
+  font: inherit;
+}
+
+.tools-dialog-form textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.tools-dialog-form {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.tools-dialog-form .admin-form-grid {
+  gap: 0.9rem;
+}
+
+.tools-dialog-form .wide {
+  grid-column: 1 / -1;
+}
+
+.tools-dialog-form .check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tools-dialog-form .check-row input {
+  width: auto;
+  min-height: 0;
+}
+
+.amount-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.contact-card-list {
+  display: grid;
+  gap: 0.9rem;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.contact-card {
+  padding: 1rem 1.1rem;
+  border: 1px solid #e1e8f1;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.contact-card.inactive {
+  opacity: 0.6;
+}
+
+.contact-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.contact-card-header strong {
+  font-size: 1rem;
+}
+
+.contact-card-badges {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.contact-card dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.6rem 1.25rem;
+  margin: 0.8rem 0 0;
+}
+
+.contact-card dt {
+  font-size: 0.75rem;
+  color: #667085;
+}
+
+.contact-card dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .tools-dialog-form .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-confirm-dialog.tools-dialog {
+  width: min(640px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}

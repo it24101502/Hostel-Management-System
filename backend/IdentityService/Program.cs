@@ -21,6 +21,9 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Identity API", Version = "v1" });
 });
 
+builder.Services.AddScoped<IStudentBlockRepository, StudentBlockRepository>();
+builder.Services.AddHostedService<StudentAllocationChangedConsumer>();
+
 builder.Services.Configure<LockoutOptions>(
     builder.Configuration.GetSection(
         LockoutOptions.SectionName));
@@ -37,6 +40,14 @@ builder.Services.Configure<
     OverdueFeeJobOptions>(
         builder.Configuration.GetSection(
             OverdueFeeJobOptions.SectionName));
+
+builder.Services.AddScoped<
+    IStudentFeeReminderRepository,
+    StudentFeeReminderRepository>();
+
+builder.Services.AddScoped<
+    IStudentFeeReminderService,
+    StudentFeeReminderService>();
 
 builder.Services.AddCors(options =>
 {

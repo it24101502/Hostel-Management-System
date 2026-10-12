@@ -92,6 +92,18 @@ builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 builder.Services.AddScoped<IComplaintRepository, ComplaintRepository>();
 builder.Services.AddScoped<IStudentComplaintService, StudentComplaintService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient<IStaffDirectory, IdentityStaffDirectory>(client =>
+{
+    string? baseUrl = builder.Configuration["Services:IdentityBaseUrl"];
+
+    if (!string.IsNullOrWhiteSpace(baseUrl))
+    {
+        client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    }
+
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 builder.Services.AddScoped<IStaffComplaintService, StaffComplaintService>();
 builder.Services.AddSingleton<INotificationPublisher, KafkaNotificationPublisher>();
 

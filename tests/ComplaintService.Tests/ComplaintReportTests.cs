@@ -14,9 +14,13 @@ public class ComplaintReportTests
         new(2026, 10, 6, 10, 0, 0, TimeSpan.Zero);
 
     private static StaffComplaintService CreateService(
-        FakeComplaintRepository repository) =>
-        new(repository, new FixedTimeProvider(Now),
-            Substitute.For<INotificationPublisher>());
+        FakeComplaintRepository repository)
+    {
+        var staffDir = Substitute.For<IStaffDirectory>();
+        staffDir.IsActiveStaffAsync(Arg.Any<ulong>(), Arg.Any<CancellationToken>()).Returns(true);
+        return new StaffComplaintService(repository, new FixedTimeProvider(Now),
+            Substitute.For<INotificationPublisher>(), staffDir);
+    }
 
     private static FakeComplaintRepository SeedMixed()
     {

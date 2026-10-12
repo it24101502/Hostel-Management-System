@@ -143,5 +143,11 @@ public class StaffComplaintsController : ControllerBase
         {
             return Conflict(new ErrorResponse { Message = exception.Message });
         }
+        catch (StaffDirectoryUnavailableException exception)
+        {
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new ErrorResponse { Message = exception.Message });
+        }
     }
 }

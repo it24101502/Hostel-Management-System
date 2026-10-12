@@ -57,8 +57,6 @@ public class StudentSelfProfileServiceTests
                 City = "Colombo",
                 District = "Colombo",
                 PostalCode = "10100",
-                ProfilePhotoUrl =
-                    "https://example.com/photo.jpg"
             };
 
         StudentProfileResponse? result =
@@ -261,9 +259,6 @@ public class StudentSelfProfileServiceTests
 
             profile.PostalCode =
                 request.PostalCode;
-
-            profile.ProfilePhotoUrl =
-                request.ProfilePhotoUrl;
 
             profile.UpdatedAt =
                 DateTime.UtcNow;

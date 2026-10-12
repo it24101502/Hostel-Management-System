@@ -50,6 +50,34 @@ const modulesByRole = {
       description: "Review, assign and resolve student complaints.",
       href: "/admin/complaints",
       accent: "indigo"
+    },
+    {
+      number: "06",
+      title: "Notices",
+      description: "Publish notices and schedules for hostel blocks.",
+      href: "/admin/notices",
+      accent: "violet"
+    },
+    {
+      number: "07",
+      title: "Fees",
+      description: "Issue invoices, record payments and download the fee report.",
+      href: "/admin/fees",
+      accent: "cyan"
+    },
+    {
+      number: "08",
+      title: "Guardian contacts",
+      description: "View and edit students' guardian and emergency contacts.",
+      href: "/admin/contacts",
+      accent: "indigo"
+    },
+    {
+      number: "09",
+      title: "Login audit log",
+      description: "Review recent sign-in attempts and failed logins.",
+      href: "/admin/audit-logs",
+      accent: "violet"
     }
   ],
   STUDENT: [
@@ -73,6 +101,27 @@ const modulesByRole = {
       description: "Report hostel problems and follow their progress.",
       href: "/student/complaints",
       accent: "violet"
+    },
+    {
+      number: "04",
+      title: "Notices",
+      description: "See current notices and schedules for your block.",
+      href: "/student/notices",
+      accent: "indigo"
+    },
+    {
+      number: "05",
+      title: "Fee reminders",
+      description: "See overdue hostel fees that need your attention.",
+      href: "/student/fees",
+      accent: "cyan"
+    },
+    {
+      number: "06",
+      title: "Emergency contacts",
+      description: "Keep your guardian and emergency contacts up to date.",
+      href: "/student/contacts",
+      accent: "violet"
     }
   ],
   WARDEN: [
@@ -89,6 +138,20 @@ const modulesByRole = {
       description: "Review, assign and resolve student complaints.",
       href: "/warden/complaints",
       accent: "cyan"
+    },
+    {
+      number: "03",
+      title: "Notices",
+      description: "Publish notices and schedules for hostel blocks.",
+      href: "/warden/notices",
+      accent: "violet"
+    },
+    {
+      number: "04",
+      title: "Guardian contacts",
+      description: "View students' guardian and emergency contacts.",
+      href: "/warden/contacts",
+      accent: "indigo"
     }
   ],
   HOSTEL_MASTER: [
@@ -105,6 +168,20 @@ const modulesByRole = {
       description: "Review, assign and resolve student complaints.",
       href: "/hostel-master/complaints",
       accent: "cyan"
+    },
+    {
+      number: "03",
+      title: "Notices",
+      description: "Publish notices and schedules for hostel blocks.",
+      href: "/hostel-master/notices",
+      accent: "violet"
+    },
+    {
+      number: "04",
+      title: "Guardian contacts",
+      description: "View students' guardian and emergency contacts.",
+      href: "/hostel-master/contacts",
+      accent: "indigo"
     }
   ]
 };

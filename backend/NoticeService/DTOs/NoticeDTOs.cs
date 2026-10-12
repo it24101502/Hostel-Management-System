@@ -1,0 +1,44 @@
+using System.ComponentModel.DataAnnotations;
+using NoticeService.Validation;
+
+namespace NoticeService.DTOs;
+
+public record CreateNoticeRequest(
+    [Required, StringLength(200, MinimumLength = 1)] string Title,
+    [Required, StringLength(4000, MinimumLength = 1)] string Content,
+    [Required, RegularExpression("^(NOTICE|SCHEDULE)$", ErrorMessage = "NoticeType must be 'NOTICE' or 'SCHEDULE'")] string NoticeType,
+    ulong? HostelBlockId,
+    [Required, ExpiryDateNotInPast] DateOnly ExpiryDate
+);
+
+public record UpdateNoticeRequest(
+    [Required, StringLength(200, MinimumLength = 1)] string Title,
+    [Required, StringLength(4000, MinimumLength = 1)] string Content,
+    [Required, RegularExpression("^(NOTICE|SCHEDULE)$", ErrorMessage = "NoticeType must be 'NOTICE' or 'SCHEDULE'")] string NoticeType,
+    ulong? HostelBlockId,
+    [Required, ExpiryDateNotInPast] DateOnly ExpiryDate
+);
+
+public record NoticeResponse(
+    ulong NoticeId,
+    string Title,
+    string Content,
+    string NoticeType,
+    ulong? HostelBlockId,
+    DateOnly ExpiryDate,
+    bool IsArchived,
+    DateTime? ArchivedAt,
+    ulong CreatedByUserId,
+    DateTime CreatedAt,
+    DateTime UpdatedAt
+);
+
+public record StudentNoticeResponse(
+    ulong NoticeId,
+    string Title,
+    string Content,
+    string NoticeType,
+    ulong? HostelBlockId,
+    DateOnly ExpiryDate,
+    DateTime CreatedAt
+);

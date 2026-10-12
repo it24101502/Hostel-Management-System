@@ -21,6 +21,7 @@ public class HostelBlocksController : ControllerBase
     }
 
     [HttpGet]
+    [RequireRole("ADMIN", "WARDEN", "HOSTEL_MASTER")]
     public async Task<IActionResult> GetActiveBlocks()
     {
         var blocks =

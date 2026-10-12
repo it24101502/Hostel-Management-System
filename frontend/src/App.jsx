@@ -9,6 +9,12 @@ import RoomsPage from "./RoomsPage.jsx";
 import AllocationsPage from "./AllocationsPage.jsx";
 import StudentComplaintsPage from "./StudentComplaintsPage.jsx";
 import StaffComplaintsPage from "./StaffComplaintsPage.jsx";
+import StudentNoticesPage from "./StudentNoticesPage.jsx";
+import StaffNoticesPage from "./StaffNoticesPage.jsx";
+import StudentFeesPage from "./StudentFeesPage.jsx";
+import AdminFeesPage from "./AdminFeesPage.jsx";
+import AdminAuditLogPage from "./AdminAuditLogPage.jsx";
+import ContactsPage from "./ContactsPage.jsx";
 
 const landingPageRoles = {
   "/student": "STUDENT",
@@ -338,6 +344,45 @@ function App() {
     window.location.pathname === "/admin/complaints"
   ) {
     return <StaffComplaintsPage />;
+  }
+
+  if (
+    window.location.pathname ===
+    "/student/fees"
+  ) {
+    return <StudentFeesPage />;
+  }
+
+  if (window.location.pathname === "/admin/fees") {
+    return <AdminFeesPage />;
+  }
+
+  if (window.location.pathname === "/admin/audit-logs") {
+    return <AdminAuditLogPage />;
+  }
+
+  if (
+    window.location.pathname === "/student/contacts" ||
+    window.location.pathname === "/warden/contacts" ||
+    window.location.pathname === "/hostel-master/contacts" ||
+    window.location.pathname === "/admin/contacts"
+  ) {
+    return <ContactsPage />;
+  }
+
+  if (
+    window.location.pathname ===
+    "/student/notices"
+  ) {
+    return <StudentNoticesPage />;
+  }
+
+  if (
+    window.location.pathname === "/warden/notices" ||
+    window.location.pathname === "/hostel-master/notices" ||
+    window.location.pathname === "/admin/notices"
+  ) {
+    return <StaffNoticesPage />;
   }
 
   const requiredRole =

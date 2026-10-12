@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { ComplaintApiError } from "./complaintApi.js";
+import {
+  ComplaintApiError,
+  getStaffDirectory
+} from "./complaintApi.js";
 
 import {
   categoryLabels,
@@ -21,19 +24,31 @@ export function ComplaintAssignDialog({
     useState("");
   const [isSubmitting, setIsSubmitting] =
     useState(false);
+  const [staff, setStaff] = useState([]);
+  const [staffFailed, setStaffFailed] =
+    useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getStaffDirectory()
+      .then((list) => {
+        if (!cancelled) setStaff(list);
+      })
+      .catch(() => {
+        if (!cancelled) setStaffFailed(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setServerMessage("");
 
     const trimmed = assigneeId.trim();
-
-    if (trimmed && !/^[1-9]\d*$/.test(trimmed)) {
-      setError(
-        "Enter a valid staff user ID, or leave it blank to assign the complaint to yourself."
-      );
-      return;
-    }
 
     setIsSubmitting(true);
 
@@ -99,21 +114,38 @@ export function ComplaintAssignDialog({
         >
           <div className="form-group">
             <label htmlFor="complaintAssignee">
-              Staff user ID (optional)
+              Assign to
             </label>
 
-            <input
+            <select
               id="complaintAssignee"
-              type="text"
-              inputMode="numeric"
               value={assigneeId}
               onChange={(event) => {
                 setAssigneeId(event.target.value);
                 setError("");
               }}
               aria-invalid={Boolean(error)}
-              placeholder="Leave blank to assign to yourself"
-            />
+            >
+              <option value="">Myself</option>
+              {staff.map((member) => (
+                <option
+                  key={member.userId}
+                  value={member.userId}
+                >
+                  {member.fullName || member.username}
+                  {" · "}
+                  {member.roleName}
+                </option>
+              ))}
+            </select>
+
+            {staffFailed && (
+              <p className="field-error">
+                The staff list could not be loaded. You
+                can still assign the complaint to
+                yourself.
+              </p>
+            )}
 
             {error && (
               <p className="field-error">{error}</p>

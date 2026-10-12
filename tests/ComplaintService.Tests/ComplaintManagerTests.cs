@@ -10,10 +10,19 @@ namespace ComplaintService.Tests;
 
 public class ComplaintManagerTests
 {
+    private static StaffComplaintService CreateService(
+        IComplaintRepository mockRepo,
+        TimeProvider mockTimeProvider,
+        INotificationPublisher mockPublisher)
+    {
+        var mockStaffDirectory = Substitute.For<IStaffDirectory>();
+        mockStaffDirectory.IsActiveStaffAsync(Arg.Any<ulong>(), Arg.Any<CancellationToken>()).Returns(true);
+        return new StaffComplaintService(mockRepo, mockTimeProvider, mockPublisher, mockStaffDirectory);
+    }
+
     [Fact]
     public async Task UpdateStatus_WhenStatusChanges_TriggersNotification()
     {
-        // Arrange
         var mockRepo = Substitute.For<IComplaintRepository>();
         var mockPublisher = Substitute.For<INotificationPublisher>();
         var mockTimeProvider = TimeProvider.System;
@@ -40,13 +49,11 @@ public class ComplaintManagerTests
             Arg.Any<DateTime>())
             .Returns(true);
 
-        var service = new StaffComplaintService(mockRepo, mockTimeProvider, mockPublisher);
+        var service = CreateService(mockRepo, mockTimeProvider, mockPublisher);
         var request = new UpdateComplaintStatusRequest { Status = "RESOLVED" };
 
-        // Act
         await service.ChangeStatusAsync(complaintId, request, actorUserId, actorRole);
 
-        // Assert
         await mockPublisher.Received(1).PublishStatusChangeNotificationAsync(
             Arg.Is<ComplaintStatusChangedEvent>(e => e.NewStatus == "RESOLVED")
         );
@@ -55,7 +62,6 @@ public class ComplaintManagerTests
     [Fact]
     public async Task UpdateStatus_WhenStatusIsSame_DoesNotTriggerNotification()
     {
-        // Arrange
         var mockRepo = Substitute.For<IComplaintRepository>();
         var mockPublisher = Substitute.For<INotificationPublisher>();
         var mockTimeProvider = TimeProvider.System;
@@ -73,10 +79,9 @@ public class ComplaintManagerTests
 
         mockRepo.GetByIdAsync(complaintId).Returns(existingComplaint);
 
-        var service = new StaffComplaintService(mockRepo, mockTimeProvider, mockPublisher);
+        var service = CreateService(mockRepo, mockTimeProvider, mockPublisher);
         var request = new UpdateComplaintStatusRequest { Status = "OPEN" };
 
-        // Act & Assert
         await Assert.ThrowsAsync<InvalidComplaintStatusException>(() =>
             service.ChangeStatusAsync(complaintId, request, actorUserId, actorRole));
 
@@ -88,7 +93,6 @@ public class ComplaintManagerTests
     [Fact]
     public async Task GetComplaints_FilterByStatusAndCategory_ReturnsMatchingComplaints()
     {
-        // Arrange
         var mockRepo = Substitute.For<IComplaintRepository>();
         var mockPublisher = Substitute.For<INotificationPublisher>();
         var mockTimeProvider = TimeProvider.System;
@@ -106,12 +110,10 @@ public class ComplaintManagerTests
 
         mockRepo.GetFilteredAsync("OPEN", "PLUMBING").Returns(expectedComplaints);
 
-        var service = new StaffComplaintService(mockRepo, mockTimeProvider, mockPublisher);
+        var service = CreateService(mockRepo, mockTimeProvider, mockPublisher);
 
-        // Act
         var result = await service.GetComplaintsAsync("open", "plumbing");
 
-        // Assert
         Assert.Single(result);
         Assert.Equal("PLUMBING", result[0].Category);
         Assert.Equal("OPEN", result[0].Status);
@@ -121,7 +123,6 @@ public class ComplaintManagerTests
     [Fact]
     public async Task GetComplaints_WithoutFilters_ReturnsAllComplaints()
     {
-        // Arrange
         var mockRepo = Substitute.For<IComplaintRepository>();
         var mockPublisher = Substitute.For<INotificationPublisher>();
         var mockTimeProvider = TimeProvider.System;
@@ -134,12 +135,10 @@ public class ComplaintManagerTests
 
         mockRepo.GetFilteredAsync(null, null).Returns(expectedComplaints);
 
-        var service = new StaffComplaintService(mockRepo, mockTimeProvider, mockPublisher);
+        var service = CreateService(mockRepo, mockTimeProvider, mockPublisher);
 
-        // Act
         var result = await service.GetComplaintsAsync(null, null);
 
-        // Assert
         Assert.Equal(2, result.Count);
         await mockRepo.Received(1).GetFilteredAsync(null, null);
     }

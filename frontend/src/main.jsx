@@ -6,6 +6,8 @@ import "./professional-theme.css";
 import "./app-shell.css";
 import "./leave.css";
 import "./complaint.css";
+import "./notice.css";
+import "./admin-tools.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

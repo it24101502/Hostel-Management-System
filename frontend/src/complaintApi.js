@@ -163,6 +163,33 @@ export function getComplaintReport(filters = {}) {
   );
 }
 
+const IDENTITY_API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  "http://localhost:5220";
+
+// Active staff who can be given a complaint.
+export async function getStaffDirectory() {
+  const response = await fetch(
+    `${IDENTITY_API_BASE_URL}/api/staff-directory`,
+    {
+      headers: {
+        Authorization: `Bearer ${sessionStorage.getItem(
+          "accessToken"
+        )}`
+      }
+    }
+  );
+
+  if (!response.ok) {
+    throw new ComplaintApiError(
+      "The staff list could not be loaded.",
+      response.status
+    );
+  }
+
+  return response.json();
+}
+
 // assignedToUserId = null assigns the complaint to the caller.
 export function assignComplaint(complaintId, assignedToUserId) {
   return sendComplaintRequest(

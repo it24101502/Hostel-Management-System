@@ -129,6 +129,22 @@ public class FeeStatusReportService
     {
         string safeValue = value ?? string.Empty;
 
+        // Stop spreadsheet formula injection (=, +, -, @ at the start).
+        // Genuine numbers (e.g. a negative outstanding amount) are left alone.
+        bool isNumber =
+            decimal.TryParse(
+                safeValue,
+                NumberStyles.Number,
+                CultureInfo.InvariantCulture,
+                out _);
+
+        if (!isNumber &&
+            safeValue.Length > 0 &&
+            "=+-@\t\r".Contains(safeValue[0]))
+        {
+            safeValue = "'" + safeValue;
+        }
+
         bool requiresQuotes =
             safeValue.Contains(',') ||
             safeValue.Contains('"') ||

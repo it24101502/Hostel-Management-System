@@ -33,6 +33,9 @@ services:
       - ./database/complaint/migrations/002_create_complaints.sql:/docker-entrypoint-initdb.d/302_create_complaints.sql:ro
       - ./database/complaint/migrations/003_create_complaint_audit_logs.sql:/docker-entrypoint-initdb.d/303_create_complaint_audit_logs.sql:ro
       - ./database/complaint/migrations/004_create_complaint_notifications.sql:/docker-entrypoint-initdb.d/304_create_complaint_notifications.sql:ro
+      - ./database/notice/migrations/001_create_notice_database.sql:/docker-entrypoint-initdb.d/401_create_notice_database.sql:ro
+      - ./database/notice/migrations/002_create_notices.sql:/docker-entrypoint-initdb.d/402_create_notices.sql:ro
+      - ./database/notice/migrations/003_create_notice_audit_logs.sql:/docker-entrypoint-initdb.d/403_create_notice_audit_logs.sql:ro
     healthcheck:
       test:
         [
@@ -89,6 +92,8 @@ services:
       - -c
       - |
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic student-deactivated --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic student-allocation-changed --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-events --partitions 1 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-requested --partitions 1 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-approved --partitions 1 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic leave-overdue --partitions 1 --replication-factor 1
@@ -110,6 +115,8 @@ services:
       OverdueFeeJob__Enabled: "true"
       Kafka__BootstrapServers: "kafka:19092"
       Kafka__StudentDeactivatedTopic: "student-deactivated"
+      Kafka__StudentAllocationChangedTopic: "student-allocation-changed"
+      Kafka__ConsumerGroupId: "identity-service"
     ports:
       - "8080:8080"
     volumes:
@@ -134,6 +141,7 @@ services:
       ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Accommodation_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
       Kafka__BootstrapServers: "kafka:19092"
       Kafka__StudentDeactivatedTopic: "student-deactivated"
+      Kafka__StudentAllocationChangedTopic: "student-allocation-changed"
       Kafka__ConsumerGroupId: "accommodation-service"
     ports:
       - "8081:8080"
@@ -187,6 +195,7 @@ services:
       Kafka__ConsumerGroupId: "complaint-service"
       Kafka__ComplaintSubmittedTopic: "complaint-submitted"
       Kafka__ComplaintUpdatedTopic: "complaint-updated"
+      Services__IdentityBaseUrl: "http://identity-api:8080"
     ports:
       - "8083:8080"
     depends_on:
@@ -194,6 +203,25 @@ services:
         condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
+
+  notice-api:
+    build:
+      context: .
+      dockerfile: backend/NoticeService/Dockerfile
+    image: hostel-notice-service:sprint4
+    container_name: hostel-notice-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      Jwt__Key: ${JWT_KEY}
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=Hostel_Notice_System;User ID=root;Password=${MYSQL_ROOT_PASSWORD};"
+      Services__AccommodationBaseUrl: "http://accommodation-api:8080"
+    ports:
+      - "8084:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   frontend:
     build:
@@ -204,6 +232,7 @@ services:
         VITE_ACCOMMODATION_API_BASE_URL: http://localhost:8081
         VITE_LEAVE_API_BASE_URL: http://localhost:8082
         VITE_COMPLAINT_API_BASE_URL: http://localhost:8083
+        VITE_NOTICE_API_BASE_URL: http://localhost:8084
     image: hostel-frontend:sprint1
     container_name: hostel-frontend-web
     restart: unless-stopped
@@ -214,6 +243,7 @@ services:
       - accommodation-api
       - leave-api
       - complaint-api
+      - notice-api
 
 volumes:
   hostel-mysql-data:
