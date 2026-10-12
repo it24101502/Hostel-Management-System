@@ -9,23 +9,20 @@ on:
       - "feature/**"
       - "integration/**"
       - "release/**"
-      - Sprint-1-QA-Testing
-      - Sprint-2-QA-Testing
-      - Sprint-3-QA-Testing
-      - Sprint-4-QA-Testing
+      - "Sprint-*-QA-Testing"
       - deploy
 
   pull_request:
     branches:
       - main
-      - Sprint-4-QA-Testing
+      - "Sprint-*-QA-Testing"
       - deploy
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v5
         with:
@@ -36,10 +33,10 @@ jobs:
         run: dotnet build backend/HostelManagement.sln --configuration Release --no-restore
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v5
         with:
@@ -48,7 +45,7 @@ jobs:
         run: dotnet test backend/HostelManagement.sln --configuration Release
 
   migrate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: test
     environment: staging
 
@@ -80,7 +77,7 @@ jobs:
       Jwt__ExpiryMinutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install MySQL client
         run: |
@@ -633,13 +630,13 @@ jobs:
           fi
 
   package:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: migrate
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: "npm"
@@ -702,7 +699,7 @@ jobs:
           .
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: package
     if: github.ref == 'refs/heads/deploy' || github.event_name == 'workflow_dispatch'
     steps:
@@ -714,5 +711,42 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             cd ~/hms
-            git pull
+            git fetch origin
+            git checkout deploy
+            git reset --hard origin/deploy
             docker compose up -d --build
+
+  deploy-frontend:
+    runs-on: ubuntu-24.04
+    needs: package
+    if: github.ref == 'refs/heads/deploy' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend with HTTPS API URLs
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: https://${{ vars.API_DOMAIN }}/identity
+          VITE_ACCOMMODATION_API_BASE_URL: https://${{ vars.API_DOMAIN }}/accommodation
+          VITE_LEAVE_API_BASE_URL: https://${{ vars.API_DOMAIN }}/leave
+          VITE_COMPLAINT_API_BASE_URL: https://${{ vars.API_DOMAIN }}/complaint
+          VITE_NOTICE_API_BASE_URL: https://${{ vars.API_DOMAIN }}/notice
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: frontend/dist
+          skip_app_build: true
