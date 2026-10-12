@@ -1,0 +1,53 @@
+.notice-type {
+  min-width: 82px; padding: 5px 10px; display: inline-flex; justify-content: center;
+  border-radius: 999px; font-size: 0.7rem; font-weight: 800;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.notice-type.notice   { color: #175cd3; background: #d1e9ff; }
+.notice-type.schedule { color: #6941c6; background: #ebe9fe; }
+
+.notice-status {
+  padding: 5px 10px; display: inline-flex; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+}
+.notice-status.active   { color: #067647; background: #dcfae6; }
+.notice-status.archived { color: #344054; background: #eaecf0; }
+
+.notice-table { min-width: 900px; }
+.notice-content-cell { max-width: 360px; overflow-wrap: anywhere; }
+
+.notice-toolbar-controls { display: flex; align-items: center; gap: 16px; }
+.notice-toggle { display: flex; align-items: center; gap: 8px; margin: 0; white-space: nowrap; }
+.notice-toggle input { width: auto; min-height: 0; }
+
+.notice-banner {
+  margin-bottom: 20px; padding: 13px 15px; color: #175cd3;
+  background: #eff8ff; border: 1px solid #b2ddff; border-radius: 12px;
+  font-size: 0.92rem; line-height: 1.45;
+}
+
+.notice-tabs { display: flex; gap: 8px; }
+.notice-tabs button {
+  width: auto; min-height: 40px; padding: 8px 16px; color: #344054;
+  background: #ffffff; border: 1px solid #d0d5dd; border-radius: 999px;
+}
+.notice-tabs button.active { color: #ffffff; background: #4f46e5; border-color: #4f46e5; }
+
+.notice-grid {
+  padding: 24px; display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+.notice-card {
+  padding: 20px; display: flex; flex-direction: column; gap: 10px;
+  background: #ffffff; border: 1px solid #e4e9f2; border-top: 4px solid #4f46e5;
+  border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 35, 67, 0.05);
+}
+.notice-card-header { display: flex; align-items: center; justify-content: space-between; }
+.notice-card h3 { margin: 0; }
+.notice-card p { margin: 0; color: #344054; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.notice-card small, .notice-audience { color: #667085; font-size: 0.8rem; }
+
+@media (max-width: 780px) {
+  .notice-toolbar-controls { flex-direction: column; align-items: stretch; }
+  .notice-grid { grid-template-columns: 1fr; padding: 16px; }
+}

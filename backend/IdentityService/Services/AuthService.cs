@@ -110,14 +110,22 @@ public class AuthService : IAuthService
             throw new AccountLockedException();
         }
 
+        bool lockoutExpired =
+            user.IsLocked &&
+            user.LockoutEndAt.HasValue &&
+            user.LockoutEndAt.Value <= DateTime.UtcNow;
+
+        // After a cooling-off period the user gets a fresh set of attempts.
+        uint previousFailedAttempts =
+            lockoutExpired ? 0 : user.FailedLoginAttempts;
+
         bool passwordIsCorrect = BCrypt.Net.BCrypt.Verify(
             request.Password,
             user.PasswordHash);
 
         if (!passwordIsCorrect)
         {
-            uint failedAttempts =
-                user.FailedLoginAttempts + 1;
+            uint failedAttempts = previousFailedAttempts + 1;
 
             bool shouldLock =
                 failedAttempts >= MaximumFailedAttempts;

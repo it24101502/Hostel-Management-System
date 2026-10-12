@@ -9,10 +9,12 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using AccommodationService.BackgroundServices;
 using Microsoft.OpenApi;
+using AccommodationService.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddSingleton<IAllocationEventPublisher, KafkaAllocationEventPublisher>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -39,7 +41,8 @@ builder.Services.AddCors(options =>
                     "http://localhost:5173",
                     "http://localhost:5174",
                     "http://20.212.39.185:5173",
-                    "https://zealous-desert-0c41b8500.6.azurestaticapps.net")
+                    "https://zealous-desert-0c41b8500.6.azurestaticapps.net",
+                    "https://orange-flower-030e3f200.2.azurestaticapps.net")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
         });

@@ -197,8 +197,7 @@ public class StudentProfileRepository
                 address_line_2 = @addressLine2,
                 city = @city,
                 district = @district,
-                postal_code = @postalCode,
-                profile_photo_url = @profilePhotoUrl
+                postal_code = @postalCode
             WHERE user_id = @userId;
             """;
 
@@ -238,11 +237,6 @@ public class StudentProfileRepository
             command,
             "@postalCode",
             request.PostalCode);
-
-        AddNullableString(
-            command,
-            "@profilePhotoUrl",
-            request.ProfilePhotoUrl);
 
         await command.ExecuteNonQueryAsync();
 

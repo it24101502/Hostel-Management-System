@@ -21,6 +21,9 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Identity API", Version = "v1" });
 });
 
+builder.Services.AddScoped<IStudentBlockRepository, StudentBlockRepository>();
+builder.Services.AddHostedService<StudentAllocationChangedConsumer>();
+
 builder.Services.Configure<LockoutOptions>(
     builder.Configuration.GetSection(
         LockoutOptions.SectionName));
@@ -38,6 +41,14 @@ builder.Services.Configure<
         builder.Configuration.GetSection(
             OverdueFeeJobOptions.SectionName));
 
+builder.Services.AddScoped<
+    IStudentFeeReminderRepository,
+    StudentFeeReminderRepository>();
+
+builder.Services.AddScoped<
+    IStudentFeeReminderService,
+    StudentFeeReminderService>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(
@@ -49,7 +60,8 @@ builder.Services.AddCors(options =>
                     "http://localhost:5173",
                     "http://localhost:5174",
                     "http://20.212.39.185:5173",
-                    "https://zealous-desert-0c41b8500.6.azurestaticapps.net")
+                    "https://zealous-desert-0c41b8500.6.azurestaticapps.net",
+                    "https://orange-flower-030e3f200.2.azurestaticapps.net")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
         });

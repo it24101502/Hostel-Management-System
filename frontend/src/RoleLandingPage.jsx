@@ -19,61 +19,138 @@ const modulesByRole = {
     {
       number: "01",
       title: "User management",
-      description:
-        "Create, view and maintain system user accounts.",
+      description: "Create, view and maintain system user accounts.",
       href: "/admin/users",
       accent: "indigo"
     },
     {
       number: "02",
       title: "Room management",
-      description:
-        "Manage hostel blocks, rooms and bed capacity.",
+      description: "Manage hostel blocks, rooms and bed capacity.",
       href: "/admin/rooms",
       accent: "cyan"
     },
     {
       number: "03",
       title: "Allocations",
-      description:
-        "Allocate students, transfer rooms and monitor occupancy.",
+      description: "Allocate students, transfer rooms and monitor occupancy.",
       href: "/admin/allocations",
       accent: "violet"
     },
     {
       number: "04",
       title: "Leave report",
-      description:
-        "View leave requests, movements and overdue returns.",
+      description: "View leave requests, movements and overdue returns.",
       href: "/admin/leave",
       accent: "cyan"
+    },
+    {
+      number: "05",
+      title: "Complaints",
+      description: "Review, assign and resolve student complaints.",
+      href: "/admin/complaints",
+      accent: "indigo"
+    },
+    {
+      number: "06",
+      title: "Notices",
+      description: "Publish notices and schedules for hostel blocks.",
+      href: "/admin/notices",
+      accent: "violet"
+    },
+    {
+      number: "07",
+      title: "Fees",
+      description: "Issue invoices, record payments and download the fee report.",
+      href: "/admin/fees",
+      accent: "cyan"
+    },
+    {
+      number: "08",
+      title: "Guardian contacts",
+      description: "View and edit students' guardian and emergency contacts.",
+      href: "/admin/contacts",
+      accent: "indigo"
+    },
+    {
+      number: "09",
+      title: "Login audit log",
+      description: "Review recent sign-in attempts and failed logins.",
+      href: "/admin/audit-logs",
+      accent: "violet"
     }
   ],
   STUDENT: [
     {
       number: "01",
       title: "My profile",
-      description:
-        "View your account and update permitted information.",
+      description: "View your account and update permitted information.",
       href: "/student/profile",
       accent: "indigo"
     },
     {
       number: "02",
       title: "Leave requests",
-      description:
-        "Submit leave requests and track their approval status.",
+      description: "Submit leave requests and track their approval status.",
       href: "/student/leave",
       accent: "cyan"
+    },
+    {
+      number: "03",
+      title: "Complaints",
+      description: "Report hostel problems and follow their progress.",
+      href: "/student/complaints",
+      accent: "violet"
+    },
+    {
+      number: "04",
+      title: "Notices",
+      description: "See current notices and schedules for your block.",
+      href: "/student/notices",
+      accent: "indigo"
+    },
+    {
+      number: "05",
+      title: "Fee reminders",
+      description: "See overdue hostel fees that need your attention.",
+      href: "/student/fees",
+      accent: "cyan"
+    },
+    {
+      number: "06",
+      title: "Emergency contacts",
+      description: "Keep your guardian and emergency contacts up to date.",
+      href: "/student/contacts",
+      accent: "violet"
     }
   ],
   WARDEN: [
     {
       number: "01",
       title: "Leave requests",
-      description:
-        "Approve or reject leave, record movements and track overdue returns.",
+      description: "Approve or reject leave, record movements and track overdue returns.",
       href: "/warden/leave",
+      accent: "indigo"
+    },
+    {
+      number: "02",
+      title: "Complaints",
+      description: "Review, assign and resolve student complaints.",
+      href: "/warden/complaints",
+      accent: "cyan"
+    },
+    {
+      number: "03",
+      title: "Notices",
+      description: "Publish notices and schedules for hostel blocks.",
+      href: "/warden/notices",
+      accent: "violet"
+    },
+    {
+      number: "04",
+      title: "Guardian contacts",
+      description: "View students' guardian and emergency contacts.",
+      href: "/warden/contacts",
       accent: "indigo"
     }
   ],
@@ -81,9 +158,29 @@ const modulesByRole = {
     {
       number: "01",
       title: "Leave requests",
-      description:
-        "Approve or reject leave, record movements and track overdue returns.",
+      description: "Approve or reject leave, record movements and track overdue returns.",
       href: "/hostel-master/leave",
+      accent: "indigo"
+    },
+    {
+      number: "02",
+      title: "Complaints",
+      description: "Review, assign and resolve student complaints.",
+      href: "/hostel-master/complaints",
+      accent: "cyan"
+    },
+    {
+      number: "03",
+      title: "Notices",
+      description: "Publish notices and schedules for hostel blocks.",
+      href: "/hostel-master/notices",
+      accent: "violet"
+    },
+    {
+      number: "04",
+      title: "Guardian contacts",
+      description: "View students' guardian and emergency contacts.",
+      href: "/hostel-master/contacts",
       accent: "indigo"
     }
   ]
