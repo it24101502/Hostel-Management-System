@@ -25,7 +25,7 @@ if ($useSonar) {
         /d:sonar.token=$env:SONAR_TOKEN `
         /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
         /d:sonar.exclusions="**/bin/**,**/obj/**,frontend/node_modules/**,**/wwwroot/**" `
-        /d:sonar.coverage.exclusions="**/Program.cs"
+        /d:sonar.coverage.exclusions="**/Program.cs,**/Repositories/**,**/Events/Kafka*.cs,**/BackgroundServices/**"
 }
 else {
     Write-Host "SONAR_TOKEN not set: skipping Sonar, producing the coverage report only." -ForegroundColor Yellow

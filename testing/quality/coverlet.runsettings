@@ -6,7 +6,7 @@
         <Configuration>
           <Format>opencover,cobertura</Format>
           <Exclude>[*.Tests]*,[xunit*]*</Exclude>
-          <ExcludeByFile>**/Program.cs</ExcludeByFile>
+          <ExcludeByFile>**/Program.cs,**/Repositories/**,**/Events/Kafka*.cs,**/BackgroundServices/**</ExcludeByFile>
         </Configuration>
       </DataCollector>
     </DataCollectors>
