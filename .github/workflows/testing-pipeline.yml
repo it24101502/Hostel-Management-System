@@ -1,0 +1,50 @@
+name: Testing Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "integration/se3112-testing" ]
+  pull_request:
+    branches: [ "integration/se3112-testing", "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit tests and mocking
+    uses: ./.github/workflows/test-unit.yml
+
+  quality:
+    name: Code quality and metrics
+    uses: ./.github/workflows/test-quality.yml
+    secrets: inherit
+
+  mutation:
+    name: Mutation testing
+    needs: unit
+    uses: ./.github/workflows/test-mutation.yml
+
+  load:
+    name: Load and performance
+    needs: unit
+    uses: ./.github/workflows/test-load.yml
+
+  summary:
+    name: Unified report
+    runs-on: ubuntu-latest
+    needs: [unit, quality, mutation, load]
+    if: always()
+    steps:
+      - name: Write summary
+        run: |
+          {
+            echo "## SE3112 Testing Pipeline"
+            echo ""
+            echo "| Layer | Owner | Result |"
+            echo "|---|---|---|"
+            echo "| Unit tests and mocking | Sandil | ${{ needs.unit.result }} |"
+            echo "| Code quality and metrics | Suwasthikka | ${{ needs.quality.result }} |"
+            echo "| Mutation testing | Imansa | ${{ needs.mutation.result }} |"
+            echo "| Load and performance | Prashasthi | ${{ needs.load.result }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
