@@ -1,0 +1,64 @@
+{
+  "uid": "hms-overview",
+  "title": "HMS Services Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Services UP (of 5)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(up)", "refId": "A" }]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Requests per second",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 9, "x": 6, "y": 0 },
+      "targets": [{
+        "expr": "sum by (job) (rate(http_requests_received_total[1m]))",
+        "legendFormat": "{{job}}", "refId": "A"
+      }]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Server errors (5xx) per second",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 9, "x": 15, "y": 0 },
+      "targets": [{
+        "expr": "sum by (job) (rate(http_requests_received_total{code=~\"5..\"}[1m]))",
+        "legendFormat": "{{job}}", "refId": "A"
+      }]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "95th percentile response time",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_seconds_bucket[5m])))",
+        "legendFormat": "{{job}}", "refId": "A"
+      }]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Memory used",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [{
+        "expr": "process_working_set_bytes",
+        "legendFormat": "{{job}}", "refId": "A"
+      }]
+    }
+  ]
+}

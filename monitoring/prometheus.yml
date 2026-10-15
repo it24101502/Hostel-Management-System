@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: identity
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["identity-api:8080"]
+
+  - job_name: accommodation
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["accommodation-api:8080"]
+
+  - job_name: leave
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["leave-api:8080"]
+
+  - job_name: complaint
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["complaint-api:8080"]
+
+  - job_name: notice
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["notice-api:8080"]

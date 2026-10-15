@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -117,10 +118,12 @@ if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 }
 
 app.UseCors("ReactFrontend");
+app.UseHttpMetrics();
 app.UseAuthentication();
 app.UseMiddleware<RoleAuthorizationMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapMetrics();
 
 app.Run();

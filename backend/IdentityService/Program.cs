@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using IdentityService.Events;
 using Microsoft.OpenApi;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -221,10 +222,12 @@ if (!app.Environment.IsStaging())
 
 app.UseStaticFiles();
 app.UseCors("ReactFrontend");
+app.UseHttpMetrics();
 app.UseAuthentication();
 app.UseMiddleware<RoleAuthorizationMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapMetrics();
 
 app.Run();
