@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$ProjectKey = "hms",
+    [string]$ProjectKey = "HMS",
     [string]$SonarHost = $(if ($env:SONAR_HOST_URL) { $env:SONAR_HOST_URL } else { "http://localhost:9000" })
 )
 
@@ -25,7 +25,10 @@ if ($useSonar) {
         /d:sonar.token=$env:SONAR_TOKEN `
         /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
         /d:sonar.exclusions="**/bin/**,**/obj/**,frontend/node_modules/**,**/wwwroot/**" `
-        /d:sonar.coverage.exclusions="**/Program.cs,**/Repositories/**,**/Events/Kafka*.cs,**/BackgroundServices/**"
+        /d:sonar.coverage.exclusions="**/Program.cs,**/Repositories/**,**/Events/Kafka*.cs,**/BackgroundServices/**,frontend/**"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Sonar begin failed. Check that SonarQube is running at $SonarHost (docker start sonarqube), the token is valid and the project key '$ProjectKey' matches."
+    }
 }
 else {
     Write-Host "SONAR_TOKEN not set: skipping Sonar, producing the coverage report only." -ForegroundColor Yellow

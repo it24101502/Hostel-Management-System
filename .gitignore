@@ -37,3 +37,6 @@ StrykerOutput/
 testing/quality/coverage-report/
 testing/load/report/
 *.jtl
+
+# Local utility scripts
+generate-token.cs
