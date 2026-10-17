@@ -3,7 +3,7 @@ name: Testing Pipeline
 on:
   workflow_dispatch:
   push:
-    branches: [ "integration/se3112-testing" ]
+    branches: [ "integration/se3112-testing", "main" ]
   pull_request:
     branches: [ "integration/se3112-testing", "main" ]
 
