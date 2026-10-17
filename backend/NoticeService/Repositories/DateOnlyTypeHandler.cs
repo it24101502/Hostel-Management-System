@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using Dapper;
 
 namespace NoticeService.Repositories;
@@ -15,6 +16,6 @@ public sealed class DateOnlyTypeHandler : SqlMapper.TypeHandler<DateOnly>
     {
         DateOnly dateOnly => dateOnly,
         DateTime dateTime => DateOnly.FromDateTime(dateTime),
-        _ => DateOnly.Parse(value.ToString()!)
+        _ => DateOnly.Parse(value.ToString()!, CultureInfo.InvariantCulture)
     };
 }
