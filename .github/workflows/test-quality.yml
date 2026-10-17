@@ -40,7 +40,7 @@ jobs:
           /d:sonar.branch.name="main"
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
           /d:sonar.exclusions="**/bin/**,**/obj/**,frontend/node_modules/**,**/wwwroot/**"
-          /d:sonar.coverage.exclusions="**/Program.cs,**/Repositories/**,**/Events/Kafka*.cs,**/BackgroundServices/**,frontend/**"
+          /d:sonar.coverage.exclusions="**/Program.cs,**/Repositories/**,**/Events/Kafka*.cs,**/BackgroundServices/**,frontend/**,**/*Tests/**,**/*.Tests/**,testing/**"
       - name: Build
         run: dotnet build backend/HostelManagement.sln -c Release
 

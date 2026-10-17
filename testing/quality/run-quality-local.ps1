@@ -25,7 +25,7 @@ if ($useSonar) {
         /d:sonar.token=$env:SONAR_TOKEN `
         /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
         /d:sonar.exclusions="**/bin/**,**/obj/**,frontend/node_modules/**,**/wwwroot/**" `
-        /d:sonar.coverage.exclusions="**/Program.cs,**/Repositories/**,**/Events/Kafka*.cs,**/BackgroundServices/**,frontend/**"
+        /d:sonar.coverage.exclusions="**/Program.cs,**/Repositories/**,**/Events/Kafka*.cs,**/BackgroundServices/**,frontend/**,**/*Tests/**,**/*.Tests/**,testing/**"
     if ($LASTEXITCODE -ne 0) {
         throw "Sonar begin failed. Check that SonarQube is running at $SonarHost (docker start sonarqube), the token is valid and the project key '$ProjectKey' matches."
     }
