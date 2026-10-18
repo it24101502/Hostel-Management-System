@@ -40,3 +40,5 @@ testing/load/report/
 
 # Local utility scripts
 generate-token.cs
+# macOS Finder metadata
+.DS_Store
