@@ -20,6 +20,11 @@ class NoticeUITests(unittest.TestCase):
         cls.username = os.getenv("E2E_USERNAME")
         cls.password = os.getenv("E2E_PASSWORD")
 
+        if os.getenv("CI") and not (cls.username and cls.password):
+            raise RuntimeError(
+                "CI requires E2E_USERNAME and E2E_PASSWORD."
+            )
+
         if not cls.username:
             cls.username = input("Warden username: ").strip()
 
