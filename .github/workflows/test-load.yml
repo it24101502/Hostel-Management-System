@@ -1,0 +1,11 @@
+name: Load and Performance Testing
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Placeholder, Prashasthi replaces this"

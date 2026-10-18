@@ -1,0 +1,11 @@
+name: Mutation Testing
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Placeholder, Imansa replaces this"

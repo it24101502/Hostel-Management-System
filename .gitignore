@@ -30,3 +30,13 @@ frontend/.env.local
 backend/IdentityService/wwwroot/uploads/profile-photos/
 
 TestResults/
+
+StrykerOutput/
+.sonarqube/
+.sonar/
+testing/quality/coverage-report/
+testing/load/report/
+*.jtl
+
+# Local utility scripts
+generate-token.cs
