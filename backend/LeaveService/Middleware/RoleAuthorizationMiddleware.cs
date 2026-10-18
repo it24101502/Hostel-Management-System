@@ -34,7 +34,7 @@ public class RoleAuthorizationMiddleware
             await context.Response.WriteAsJsonAsync(new
             {
                 message = "Authentication is required."
-            });
+            }, context.RequestAborted);
 
             return;
         }
@@ -51,7 +51,7 @@ public class RoleAuthorizationMiddleware
             await context.Response.WriteAsJsonAsync(new
             {
                 message = "Access denied."
-            });
+            }, context.RequestAborted);
 
             return;
         }
