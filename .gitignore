@@ -30,3 +30,8 @@ frontend/.env.local
 backend/IdentityService/wwwroot/uploads/profile-photos/
 
 TestResults/
+
+# UI E2E generated reports
+tests/ui_e2e/artifacts/
+notice-validation.png
+__pycache__/
