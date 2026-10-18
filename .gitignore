@@ -47,3 +47,7 @@ generate-token.cs
 # Postman configs
 .postman/
 
+# UI E2E generated reports
+tests/ui_e2e/artifacts/
+notice-validation.png
+__pycache__/
