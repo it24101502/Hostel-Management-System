@@ -37,3 +37,13 @@ StrykerOutput/
 testing/quality/coverage-report/
 testing/load/report/
 *.jtl
+
+# Local utility scripts
+generate-token.cs
+# macOS Finder metadata
+.DS_Store
+**/.DS_Store
+
+# Postman configs
+.postman/
+
