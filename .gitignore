@@ -42,3 +42,8 @@ testing/load/report/
 generate-token.cs
 # macOS Finder metadata
 .DS_Store
+**/.DS_Store
+
+# Postman configs
+.postman/
+
