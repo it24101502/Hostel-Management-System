@@ -78,7 +78,6 @@ The main GitHub Actions workflow is [`.github/workflows/testing-pipeline.yml`](h
 | --- | --- | --- |
 | Unit tests and mocking | `dotnet test` on `backend/HostelManagement.sln` with XPlat coverage | `unit-test-results` artifact |
 | Code quality and metrics | Build, tests, OpenCover coverage, optional SonarCloud analysis | `coverage-report` artifact and run summary |
-| Mutation testing | Current workflow is a placeholder that prints a message | No mutation score is produced yet |
 | Load and performance | Docker stack, seeded test accounts, JMeter **smoke** profile, quality gate | `load-report-smoke` artifact and run summary |
 | Unified report | Collects the four job results | Actions run summary |
 
@@ -153,10 +152,6 @@ docker exec -i hostel-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < test
 
 Run one profile at a time. `smoke` is the CI check; `load`, `stress`, and `spike` exercise heavier traffic. For repeatable load runs, use `RESET_DB=1 ./testing/load/run-load.sh load` to remove prior **load-test** leave rows. The script creates a JMeter HTML dashboard and raw results under `testing/load/report/`, then fails its gate when an endpoint's p95 exceeds **3000 ms** or functional errors exceed **1%**. The separate `stress-steps.sh` script searches for a breaking point.
 
-### Mutation testing
-
-The branch contains a placeholder `.github/workflows/test-mutation.yml` and no `testing/mutation/stryker-config.json`. There is currently no working mutation-test command or report to run from this branch. Add a mutation configuration and replace the placeholder before reporting mutation coverage.
-
 ## 5. Team responsibilities
 
 The project README identifies the four members' primary product areas. The testing workflow and test READMEs identify the testing assignments below. The team confirmed that Sandil is De Silva and Imansa is Premarathna.
@@ -166,4 +161,4 @@ The project README identifies the four members' primary product areas. The testi
 | Suwasthikka S — IT24101502 | Daily operations: complaints and schedules | Code quality and metrics (workflow owner: Suwasthikka) |
 | Peiris M P V P — IT24100245 | Leave and movement | JMeter load and performance testing (load README names Prashasthi, IT24100245) |
 | De Silva D S P S N (Sandil) — IT24102190 | Rooms and allocation | Unit tests and mocking |
-| Premarathna P A I B (Imansa) — IT24101844 | Users and fees | Selenium NoticeService UI/E2E testing (UI README); mutation testing assignment, with CI implementation still a placeholder |
+| Premarathna P A I B (Imansa) — IT24101844 | Users and fees | Selenium NoticeService UI/E2E testing (UI README); |
