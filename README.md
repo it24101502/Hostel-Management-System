@@ -79,19 +79,20 @@ The main GitHub Actions workflow is [`.github/workflows/testing-pipeline.yml`](h
 | Unit tests and mocking | `dotnet test` on `backend/HostelManagement.sln` with XPlat coverage | `unit-test-results` artifact |
 | Code quality and metrics | Build, tests, OpenCover coverage, optional SonarCloud analysis | `coverage-report` artifact and run summary |
 | Load and performance | Docker stack, seeded test accounts, JMeter **smoke** profile, quality gate | `load-report-smoke` artifact and run summary |
+| UI / E2E (Selenium) | Disposable stack, seeded accounts, Chrome headless | `selenium-ui-e2e-evidence` artifact |
 | Unified report | Collects the four job results | Actions run summary |
 
-The separate [Backend CI workflow](https://github.com/it24101502/Hostel-Management-System/blob/integration/se3112-testing/.github/workflows/backend-ci.yml) also builds services, checks database migrations, runs the Selenium UI suite against disposable services, and builds the frontend and Docker images. The Selenium suite is **not** part of `testing-pipeline.yml`.
+The separate [Backend CI workflow](https://github.com/it24101502/Hostel-Management-System/blob/integration/se3112-testing/.github/workflows/backend-ci.yml) also builds services, checks database migrations, runs the Selenium UI suite against disposable services, and builds the frontend and Docker images. The Selenium suite runs in both testing-pipeline.yml (test-ui.yml) and backend-ci.yml.
 
 ### Combined local command
 
 From the repository root in PowerShell:
 
 ```powershell
-.\scripts\run-all.ps1 -SkipMutation
+.\scripts\run-all.ps1
 ```
 
-This runs the .NET tests, quality/coverage script, and a direct JMeter run. Start and seed the Docker stack before the JMeter stage. The script's mutation command references `testing/mutation/stryker-config.json`, which is absent from this branch; use `-SkipMutation` until a real mutation configuration is added. You can also use `-SkipUnit`, `-SkipQuality`, or `-SkipLoad` to omit a stage. The combined script does not run Selenium.
+This runs the .NET tests, quality/coverage script, and a direct JMeter run. Start and seed the Docker stack before the JMeter stage. The script's mutation command references `testing/mutation/stryker-config.json`, which is absent from this branch; use `-SkipMutation` until a real mutation configuration is added. You can also use `-SkipUnit`, `-SkipQuality`, or `-SkipLoad` to omit a stage.
 
 ## 4. Run each test or check separately
 
@@ -154,11 +155,11 @@ Run one profile at a time. `smoke` is the CI check; `load`, `stress`, and `spike
 
 ## 5. Team responsibilities
 
-The project README identifies the four members' primary product areas. The testing workflow and test READMEs identify the testing assignments below. The team confirmed that Sandil is De Silva and Imansa is Premarathna.
+Four testing areas were chosen: Unit Testing & Mocking, Code Quality & Metrics, Load & Performance, and UI/E2E Testing. Mutation testing was not selected.
 
-| Member / identifier | Product responsibility | Testing responsibility documented in this branch |
+| Member | Product responsibility | Testing area |
 | --- | --- | --- |
-| Suwasthikka S — IT24101502 | Daily operations: complaints and schedules | Code quality and metrics (workflow owner: Suwasthikka) |
-| Peiris M P V P — IT24100245 | Leave and movement | JMeter load and performance testing (load README names Prashasthi, IT24100245) |
-| De Silva D S P S N (Sandil) — IT24102190 | Rooms and allocation | Unit tests and mocking |
-| Premarathna P A I B (Imansa) — IT24101844 | Users and fees | Selenium NoticeService UI/E2E testing (UI README); |
+| Suwasthikka S — IT24101502 | Daily operations (complaints, schedules) | Code Quality & Metrics (`testing/quality/`, `test-quality.yml`) |
+| Peiris M P V P (Prashasthi) — IT24100245 | Leave and movement | Load & Performance (`testing/load/`, `test-load.yml`) |
+| De Silva D S P S N (Sandil) — IT24102190 | Rooms and allocation | Unit Testing & Mocking (`tests/*`, `test-unit.yml`) |
+| Premarathna P A I B (Imansa) — IT24101844 | Users and fees | UI / E2E with Selenium (`tests/ui_e2e/`, `test-ui.yml`) |

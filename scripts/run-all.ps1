@@ -2,7 +2,7 @@
 param(
     [switch]$SkipUnit,
     [switch]$SkipQuality,
-    [switch]$SkipMutation,
+    [switch]$SkipUi,
     [switch]$SkipLoad
 )
 
@@ -42,13 +42,9 @@ if (-not $SkipQuality) {
     }
 }
 
-if (-not $SkipMutation) {
-    Invoke-Stage "Mutation testing" {
-        Push-Location tests/LeaveService.Tests
-        try {
-            dotnet stryker --config-file ../../testing/mutation/stryker-config.json
-        }
-        finally { Pop-Location }
+if (-not $SkipUi) {
+    Invoke-Stage "UI testing" {
+        & "$root/testing/ui/run-ui-local.ps1"
     }
 }
 

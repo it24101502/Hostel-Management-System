@@ -1,0 +1,223 @@
+name: UI / E2E Tests
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ui-e2e:
+    name: Selenium UI E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      MYSQL_ROOT_PASSWORD: hms-ci-e2e-password
+      JWT_KEY: hms-ci-e2e-signing-key-for-disposable-tests-only
+      E2E_USERNAME: E2EWarden
+      E2E_PASSWORD: E2E-Warden-2026!
+      E2E_HEADLESS: "1"
+      E2E_BROWSER: chrome
+      E2E_STUDENT_USERNAME: E2EStudent
+      E2E_STUDENT_PASSWORD: E2E-Student-2026!
+      E2E_MYSQL_CONTAINER: hostel-mysql
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install -r tests/ui_e2e/requirements.txt
+          python -m pip install bcrypt==4.3.0
+
+      - name: Build and start test services
+        run: |
+          docker compose up -d --build mysql identity-api accommodation-api notice-api
+
+      - name: Wait for MySQL initialization
+        shell: bash
+        run: |
+          ready=0
+          for attempt in {1..90}; do
+            status=$(docker inspect --format '{{.State.Health.Status}}' hostel-mysql)
+            if [ "$status" = "healthy" ]; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = "1"
+          docker exec -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" hostel-mysql \
+            mysql -uroot -e "SHOW TABLES FROM Hostel_Notice_System;"
+
+      - name: Create disposable Warden account
+        shell: python
+        run: |
+          import bcrypt
+          import os
+          import subprocess
+
+          password_hash = bcrypt.hashpw(
+              os.environ["E2E_PASSWORD"].encode(),
+              bcrypt.gensalt(rounds=10),
+          ).decode()
+
+          sql = f"""
+          USE Hostel_Management_System;
+          INSERT INTO users (
+              role_id, username, normalized_username,
+              email, normalized_email, password_hash,
+              first_name, last_name, is_email_verified
+          )
+          SELECT role_id, 'E2EWarden', 'E2EWARDEN',
+              'e2e-warden@example.test', 'E2E-WARDEN@EXAMPLE.TEST',
+              '{password_hash}', 'E2E', 'Warden', TRUE
+          FROM roles WHERE role_name = 'WARDEN';
+          """
+
+          subprocess.run(
+              [
+                  "docker", "exec", "-i",
+                  "-e", "MYSQL_PWD=" + os.environ["MYSQL_ROOT_PASSWORD"],
+                  "hostel-mysql", "mysql", "-uroot",
+              ],
+              input=sql,
+              text=True,
+              check=True,
+          )
+          
+      - name: Create student and block fixtures
+        shell: python
+        run: |
+          import bcrypt
+          import os
+          import subprocess
+
+          password_hash = bcrypt.hashpw(
+              os.environ["E2E_STUDENT_PASSWORD"].encode(),
+              bcrypt.gensalt(rounds=10),
+          ).decode()
+
+          sql = f"""
+          USE Hostel_Accommodation_System;
+          INSERT INTO hostel_blocks
+              (block_id, block_code, block_name)
+          VALUES
+              (7, 'E2E-B7', 'E2E Student Block'),
+              (8, 'E2E-B8', 'E2E Other Block');
+
+          USE Hostel_Management_System;
+          INSERT INTO hostel_blocks
+              (block_id, block_code, block_name)
+          VALUES
+              (7, 'E2E-B7', 'E2E Student Block'),
+              (8, 'E2E-B8', 'E2E Other Block');
+
+          INSERT INTO users (
+              role_id, username, normalized_username,
+              email, normalized_email, password_hash,
+              first_name, last_name, is_email_verified
+          )
+          SELECT role_id, 'E2EStudent', 'E2ESTUDENT',
+              'e2e-student@example.test', 'E2E-STUDENT@EXAMPLE.TEST',
+              '{password_hash}', 'E2E', 'Student', TRUE
+          FROM roles WHERE role_name = 'STUDENT';
+
+          INSERT INTO student_profiles (
+              user_id, registration_number,
+              normalized_registration_number, hostel_block_id
+          )
+          SELECT user_id, 'E2E-STUDENT-001', 'E2E-STUDENT-001', 7
+          FROM users WHERE username = 'E2EStudent';
+          """
+
+          subprocess.run(
+              [
+                  "docker", "exec", "-i", "hostel-mysql",
+                  "sh", "-c",
+                  'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot',
+              ],
+              input=sql,
+              text=True,
+              check=True,
+          )
+
+      - name: Start local frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: http://localhost:8080
+          VITE_ACCOMMODATION_API_BASE_URL: http://localhost:8081
+          VITE_NOTICE_API_BASE_URL: http://localhost:8084
+        run: |
+          npm ci
+          nohup npm run dev -- --host 0.0.0.0 --port 5173 --strictPort > ../frontend-e2e.log 2>&1 &
+
+      - name: Wait for frontend and APIs
+        shell: python
+        run: |
+          import time
+          import urllib.error
+          import urllib.request
+
+          targets = [
+              ("http://localhost:5173", {200}),
+              ("http://localhost:8080/api/auth/login", {405}),
+              ("http://localhost:8081/api/admin/blocks", {401}),
+              ("http://localhost:8084/api/notices", {401}),
+          ]
+
+          for url, expected in targets:
+              for attempt in range(60):
+                  try:
+                      with urllib.request.urlopen(url, timeout=3) as response:
+                          status = response.status
+                  except urllib.error.HTTPError as error:
+                      status = error.code
+                  except (urllib.error.URLError, TimeoutError, OSError):
+                      status = None
+
+                  if status in expected:
+                      print("Ready:", url)
+                      break
+                  time.sleep(2)
+              else:
+                  raise RuntimeError(f"Service not ready: {url}")
+
+      - name: Run Selenium tests
+        run: python tests/ui_e2e/run_tests.py
+
+      - name: Collect service logs
+        if: always()
+        run: |
+          mkdir -p tests/ui_e2e/artifacts
+          docker compose logs --no-color > tests/ui_e2e/artifacts/services.log 2>&1
+          if [ -f frontend-e2e.log ]; then
+            cp frontend-e2e.log tests/ui_e2e/artifacts/
+          fi
+          if [ -f notice-validation.png ]; then
+            cp notice-validation.png tests/ui_e2e/artifacts/
+          fi
+
+      - name: Upload E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-ui-e2e-evidence
+          path: tests/ui_e2e/artifacts/
+          retention-days: 7
+
+      - name: Stop disposable services
+        if: always()
+        run: docker compose down -v
