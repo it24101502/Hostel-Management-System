@@ -1,0 +1,124 @@
+# =========================================================
+# SE3112 - Load and Performance Testing (JMeter)
+# Owner: Prashasthi
+#
+# Called by testing-pipeline.yml after the unit tests pass
+# (smoke profile), or run by hand from the Actions tab with a
+# heavier profile: Actions -> Load and Performance Testing ->
+# Run workflow -> choose profile.
+#
+# Steps: start the 5 microservices in Docker -> seed test
+# accounts -> install JMeter -> run the profile -> quality gate
+# (p95 <= 3 s, errors <= 1 %) -> upload the HTML dashboard.
+# =========================================================
+name: Load and Performance Testing
+
+on:
+  workflow_call:
+    inputs:
+      profile:
+        description: Load profile to run
+        type: string
+        default: smoke
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Load profile to run
+        type: choice
+        options: [smoke, load, stress, spike]
+        default: smoke
+
+permissions:
+  contents: read
+
+env:
+  JMETER_VERSION: "5.6.3"
+  PROFILE: ${{ inputs.profile || 'smoke' }}
+
+jobs:
+  load:
+    name: JMeter (${{ inputs.profile || 'smoke' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Throwaway secrets: this database only lives for this job,
+      # so nothing real is stored in the repo or in GitHub Secrets.
+      - name: Create a throwaway .env for this run
+        run: |
+          echo "MYSQL_ROOT_PASSWORD=ci_$(openssl rand -hex 12)" > .env
+          echo "JWT_KEY=$(openssl rand -hex 32)" >> .env
+
+      # Only the backend: the React frontend is not under test here.
+      - name: Start MySQL, Kafka and the 5 microservices
+        run: >
+          docker compose up -d --build
+          mysql kafka kafka-init
+          identity-api accommodation-api leave-api complaint-api notice-api
+
+      - name: Wait until every service answers
+        run: |
+          for port in 8080 8081 8082 8083 8084; do
+            for i in $(seq 1 60); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://localhost:$port/" || true)
+              if [ "$code" != "000" ]; then echo "port $port is up (HTTP $code)"; break; fi
+              if [ "$i" -eq 60 ]; then echo "port $port never came up"; docker compose ps; exit 1; fi
+              sleep 5
+            done
+          done
+
+      - name: Seed load-test accounts
+        run: docker exec -i hostel-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < testing/load/seed.sql
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache JMeter
+        id: cache-jmeter
+        uses: actions/cache@v4
+        with:
+          path: ~/jmeter
+          key: jmeter-${{ env.JMETER_VERSION }}
+
+      - name: Install JMeter
+        if: steps.cache-jmeter.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz" | tar -xz -C "$HOME"
+          mv "$HOME/apache-jmeter-${JMETER_VERSION}" "$HOME/jmeter"
+
+      - name: Add JMeter to PATH
+        run: echo "$HOME/jmeter/bin" >> "$GITHUB_PATH"
+
+      - name: Run load test and quality gate
+        run: ./testing/load/run-load.sh "$PROFILE"
+
+      - name: Publish results table to the run summary
+        if: always()
+        run: |
+          f="testing/load/report/${PROFILE}-summary.md"
+          {
+            echo "## Load and performance (${PROFILE} profile)"
+            if [ -f "$f" ]; then cat "$f"; else echo "No summary was produced."; fi
+            echo ""
+            echo "Download the **load-report-${PROFILE}** artifact and open ${PROFILE}/index.html for the full JMeter dashboard."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload JMeter HTML dashboard and raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-report-${{ env.PROFILE }}
+          path: testing/load/report/
+          if-no-files-found: warn
+
+      - name: Show service logs if something failed
+        if: failure()
+        run: docker compose logs --tail=150
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v

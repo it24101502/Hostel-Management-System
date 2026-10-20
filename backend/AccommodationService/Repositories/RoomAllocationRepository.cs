@@ -7,6 +7,8 @@ namespace AccommodationService.Repositories;
 
 public class RoomAllocationRepository : IRoomAllocationRepository
 {
+    private const string RoomIdParameter = "@roomId";
+
     private readonly string _connectionString;
 
     public RoomAllocationRepository(IConfiguration configuration)
@@ -441,7 +443,7 @@ public class RoomAllocationRepository : IRoomAllocationRepository
         await using var command =
             new MySqlCommand(query, connection, transaction);
 
-        command.Parameters.AddWithValue("@roomId", roomId);
+        command.Parameters.AddWithValue(RoomIdParameter, roomId);
 
         await using var reader =
             await command.ExecuteReaderAsync();
@@ -494,7 +496,7 @@ public class RoomAllocationRepository : IRoomAllocationRepository
         await using var command =
             new MySqlCommand(query, connection, transaction);
 
-        command.Parameters.AddWithValue("@roomId", roomId);
+        command.Parameters.AddWithValue(RoomIdParameter, roomId);
 
         object? result = await command.ExecuteScalarAsync();
 
@@ -520,7 +522,7 @@ public class RoomAllocationRepository : IRoomAllocationRepository
         command.Parameters.AddWithValue(
             "@studentProfileId",
             studentProfileId);
-        command.Parameters.AddWithValue("@roomId", roomId);
+        command.Parameters.AddWithValue(RoomIdParameter, roomId);
 
         await command.ExecuteNonQueryAsync();
 
@@ -581,7 +583,7 @@ public class RoomAllocationRepository : IRoomAllocationRepository
         command.Parameters.AddWithValue(
             "@allocationId",
             allocationId);
-        command.Parameters.AddWithValue("@roomId", roomId);
+        command.Parameters.AddWithValue(RoomIdParameter, roomId);
 
         await command.ExecuteNonQueryAsync();
     }

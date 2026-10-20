@@ -30,3 +30,24 @@ frontend/.env.local
 backend/IdentityService/wwwroot/uploads/profile-photos/
 
 TestResults/
+
+StrykerOutput/
+.sonarqube/
+.sonar/
+testing/quality/coverage-report/
+testing/load/report/
+*.jtl
+
+# Local utility scripts
+generate-token.cs
+# macOS Finder metadata
+.DS_Store
+**/.DS_Store
+
+# Postman configs
+.postman/
+
+# UI E2E generated reports
+tests/ui_e2e/artifacts/
+notice-validation.png
+__pycache__/
